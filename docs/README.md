@@ -2,7 +2,7 @@
 
 Single-file freelance marketplace SPA with a real Supabase backend (auth, Postgres + RLS, Realtime, Storage). Built as one self-contained `index.html` so it can be served from GitHub Pages without a build step.
 
-**Live:** https://dzektomas059-ctrl.github.io/minilit/
+**Live:** https://dzektomas059-ctrl.github.io/minilit-freelance/
 
 ## What's inside `index.html`
 
