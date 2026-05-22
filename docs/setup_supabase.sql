@@ -94,6 +94,11 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('covers', 'covers', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- 5a. Создаём бакет avatars (если нет)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
 -- 6. RLS политики для бакета covers
 DROP POLICY IF EXISTS "covers: select for all" ON storage.objects;
 CREATE POLICY "covers: select for all" ON storage.objects FOR SELECT USING (bucket_id = 'covers');
@@ -124,6 +129,24 @@ CREATE POLICY "portfolio images: update for owner" ON storage.objects FOR UPDATE
 
 DROP POLICY IF EXISTS "portfolio images: delete for owner" ON storage.objects;
 CREATE POLICY "portfolio images: delete for owner" ON storage.objects FOR DELETE USING (bucket_id = 'portfolio' AND auth.uid() = owner);
+
+-- 8a. Создаём бакет portfolio_videos (если нет)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('portfolio_videos', 'portfolio_videos', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 8b. RLS политики для бакета portfolio_videos
+DROP POLICY IF EXISTS "portfolio_videos: public read" ON storage.objects;
+CREATE POLICY "portfolio_videos: public read" ON storage.objects FOR SELECT USING (bucket_id = 'portfolio_videos');
+
+DROP POLICY IF EXISTS "portfolio_videos: auth upload own" ON storage.objects;
+CREATE POLICY "portfolio_videos: auth upload own" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'portfolio_videos' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "portfolio_videos: auth update own" ON storage.objects;
+CREATE POLICY "portfolio_videos: auth update own" ON storage.objects FOR UPDATE USING (bucket_id = 'portfolio_videos' AND auth.uid() = owner);
+
+DROP POLICY IF EXISTS "portfolio_videos: auth delete own" ON storage.objects;
+CREATE POLICY "portfolio_videos: auth delete own" ON storage.objects FOR DELETE USING (bucket_id = 'portfolio_videos' AND auth.uid() = owner);
 
 -- ============================================================
 -- 9. Таблица уведомлений
