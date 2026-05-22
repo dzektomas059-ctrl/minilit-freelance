@@ -3,6 +3,8 @@
 drop table if exists reviews cascade;
 drop table if exists messages cascade;
 drop table if exists chats cascade;
+drop table if exists proposals cascade;
+drop table if exists portfolio cascade;
 drop table if exists orders cascade;
 drop table if exists applications cascade;
 drop table if exists services cascade;
@@ -134,6 +136,31 @@ create table complaints (
   created_at timestamptz default now()
 );
 
+create table portfolio (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  title text not null,
+  description text,
+  image_url text,
+  project_url text,
+  created_at timestamptz default now()
+);
+
+create table proposals (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references jobs(id) on delete cascade,
+  freelancer_id uuid not null references profiles(id) on delete cascade,
+  title text not null,
+  description text,
+  price int not null,
+  deadline int,
+  image_urls jsonb default '[]'::jsonb,
+  video_url text,
+  status text default 'pending' check (status in ('pending','accepted','rejected','withdrawn')),
+  created_at timestamptz default now(),
+  unique (task_id, freelancer_id)
+);
+
 create table withdrawals (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references profiles(id) on delete cascade,
@@ -161,6 +188,9 @@ create index on notifications (user_id);
 create index on notifications (created_at desc);
 create index on complaints (complainant_id);
 create index on complaints (status);
+create index on portfolio (user_id);
+create index on proposals (task_id);
+create index on proposals (freelancer_id);
 create index on withdrawals (user_id);
 create index on withdrawals (status);
 

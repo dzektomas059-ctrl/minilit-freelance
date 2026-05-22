@@ -14,7 +14,7 @@ do $$ declare r record;
 begin
   for r in select schemaname, tablename, policyname from pg_policies
            where schemaname='public' and tablename in
-             ('profiles','jobs','services','applications','orders','chats','messages','reviews','notifications','complaints','withdrawals','bookmarks')
+             ('profiles','jobs','services','applications','orders','chats','messages','reviews','notifications','complaints','withdrawals','bookmarks','portfolio','proposals')
   loop
     execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename);
   end loop;
@@ -105,6 +105,32 @@ create policy "notifications: update own" on notifications
 create policy "notifications: insert service" on notifications
   for insert with check (true);
 
+-- portfolio: owner manages; public reads
+alter table portfolio enable row level security;
+
+create policy "public read portfolio" on portfolio for select using (true);
+
+create policy "own insert portfolio" on portfolio for insert with check (auth.uid() = user_id);
+
+create policy "own update portfolio" on portfolio for update using (auth.uid() = user_id);
+
+create policy "own delete portfolio" on portfolio for delete using (auth.uid() = user_id);
+
+-- proposals: freelancer creates; both parties read; freelancer updates/withdraws
+alter table proposals enable row level security;
+
+create policy "public read proposals" on proposals for select using (true);
+
+create policy "own insert proposal" on proposals for insert with check (
+  auth.uid() = freelancer_id and
+  exists (select 1 from jobs where id = task_id and status = 'open')
+);
+
+create policy "own update proposal" on proposals for update using (auth.uid() = freelancer_id);
+
+create policy "client update proposal status" on proposals for update
+  using (auth.uid() in (select client_id from jobs where id = task_id));
+
 -- admin helper: returns true if the current user has is_admin flag
 create or replace function public.is_admin() returns boolean
 language sql stable security definer as $$
@@ -147,23 +173,6 @@ create policy "admin update jobs" on jobs
 create policy "admin update services" on services
   for update using (public.is_admin()) with check (public.is_admin());
 
--- ============================================================
--- Bookmarks
--- ============================================================
-alter table bookmarks enable row level security;
-
-create policy "Users can read own bookmarks"
-  on bookmarks for select
-  using (auth.uid() = user_id);
-
-create policy "Users can insert own bookmarks"
-  on bookmarks for insert
-  with check (auth.uid() = user_id);
-
-create policy "Users can delete own bookmarks"
-  on bookmarks for delete
-  using (auth.uid() = user_id);
-
 -- add to realtime publication (idempotent)
 do $$
 begin
@@ -184,5 +193,17 @@ begin
     where pubname = 'supabase_realtime' and tablename = 'withdrawals'
   ) then
     alter publication supabase_realtime add table withdrawals;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'portfolio'
+  ) then
+    alter publication supabase_realtime add table portfolio;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'proposals'
+  ) then
+    alter publication supabase_realtime add table proposals;
   end if;
 end $$;

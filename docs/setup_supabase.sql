@@ -14,16 +14,24 @@ BEGIN
   END IF;
 END $$;
 
--- 2. Создаём таблицу portfolio
+-- 2. Создаём таблицу portfolio (если не существует)
 CREATE TABLE IF NOT EXISTS portfolio (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references profiles(id) on delete cascade,
+  user_id uuid not null references profiles(id) on delete cascade,
   title text not null,
   description text,
   image_url text,
-  category text,
+  project_url text,
   created_at timestamptz default now()
 );
+
+-- добавляем project_url, если колонки нет (для существующих БД)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='portfolio' AND column_name='project_url') THEN
+    ALTER TABLE portfolio ADD COLUMN project_url text;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_portfolio_user ON portfolio (user_id);
 CREATE INDEX IF NOT EXISTS idx_portfolio_created ON portfolio (created_at desc);
@@ -43,6 +51,43 @@ CREATE POLICY "portfolio: update for owner" ON portfolio FOR UPDATE USING (auth.
 
 DROP POLICY IF EXISTS "portfolio: delete for owner" ON portfolio;
 CREATE POLICY "portfolio: delete for owner" ON portfolio FOR DELETE USING (auth.uid() = user_id);
+
+-- 4a. Создаём таблицу proposals (если не существует)
+CREATE TABLE IF NOT EXISTS proposals (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references jobs(id) on delete cascade,
+  freelancer_id uuid not null references profiles(id) on delete cascade,
+  title text not null,
+  description text,
+  price int not null,
+  deadline int,
+  image_urls jsonb default '[]'::jsonb,
+  video_url text,
+  status text default 'pending' check (status in ('pending','accepted','rejected','withdrawn')),
+  created_at timestamptz default now(),
+  unique (task_id, freelancer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_proposals_task ON proposals (task_id);
+CREATE INDEX IF NOT EXISTS idx_proposals_freelancer ON proposals (freelancer_id);
+
+ALTER TABLE proposals enable row level security;
+
+DROP POLICY IF EXISTS "public read proposals" ON proposals;
+CREATE POLICY "public read proposals" ON proposals FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "own insert proposal" ON proposals;
+CREATE POLICY "own insert proposal" ON proposals FOR INSERT WITH CHECK (
+  auth.uid() = freelancer_id AND
+  exists (select 1 from jobs where id = task_id and status = 'open')
+);
+
+DROP POLICY IF EXISTS "own update proposal" ON proposals;
+CREATE POLICY "own update proposal" ON proposals FOR UPDATE USING (auth.uid() = freelancer_id);
+
+DROP POLICY IF EXISTS "client update proposal status" ON proposals;
+CREATE POLICY "client update proposal status" ON proposals FOR UPDATE
+  USING (auth.uid() in (select client_id from jobs where id = task_id));
 
 -- 5. Создаём бакет covers (если нет)
 INSERT INTO storage.buckets (id, name, public)
