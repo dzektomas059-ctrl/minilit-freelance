@@ -225,11 +225,11 @@ img{max-width:100%;display:block}
 .auth-divider{display:flex;align-items:center;gap:12px;margin:14px 0;color:var(--gray);font-size:13px}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--line)}
 
-/* metric tiles */
+/* metric tiles — hardcoded across all themes for maximum contrast */
 .metric-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
 .tile{background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:18px}
-.tile .label{font-family:'Inter',system-ui,sans-serif;font-weight:600;font-size:13px;color:#111;letter-spacing:-.1px;text-transform:uppercase}
-.tile .value{font-family:'Inter',system-ui,sans-serif;font-size:32px;font-weight:800;margin-top:4px;color:#000;letter-spacing:-.5px;line-height:1.1}
+.tile .label{font-family:'Inter',system-ui,sans-serif;font-weight:600;font-size:13px;color:#000!important;letter-spacing:-.1px;text-transform:uppercase}
+.tile .value{font-family:'Inter',system-ui,sans-serif;font-size:2.2rem;font-weight:800;margin-top:4px;color:#000!important;letter-spacing:-.5px;line-height:1.1}
 
 /* task / service cards */
 .list-card{
@@ -1164,11 +1164,7 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
 [data-theme="pirate"] .subnav-inner a:hover, [data-theme="ocean"] .subnav-inner a:hover, [data-theme="mage"] .subnav-inner a:hover,
 [data-theme="gothic"] .subnav-inner a:hover, [data-theme="forest"] .subnav-inner a:hover, [data-theme="sunset"] .subnav-inner a:hover{color:var(--green)}
 
-/* tile/stat label + value */
-[data-theme="dark"] .tile .value, [data-theme="pirate"] .tile .value, [data-theme="ocean"] .tile .value,
-[data-theme="mage"] .tile .value, [data-theme="gothic"] .tile .value, [data-theme="forest"] .tile .value, [data-theme="sunset"] .tile .value{font-family:'Inter',system-ui,sans-serif;font-size:32px;font-weight:800;letter-spacing:-.5px;line-height:1.1;color:var(--t-text)}
-[data-theme="dark"] .tile .label, [data-theme="pirate"] .tile .label, [data-theme="ocean"] .tile .label,
-[data-theme="mage"] .tile .label, [data-theme="gothic"] .tile .label, [data-theme="forest"] .tile .label, [data-theme="sunset"] .tile .label{font-family:'Inter',system-ui,sans-serif;font-weight:600;font-size:13px;letter-spacing:-.1px;text-transform:uppercase;color:#ccc}
+/* tile/stat label + value — handled by base CSS with !important */
 
 /* additional dark-family info pages */
 [data-theme="pirate"] .info-back, [data-theme="ocean"] .info-back, [data-theme="mage"] .info-back,
