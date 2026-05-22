@@ -5764,7 +5764,7 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
         <div class="muted small">Вы сможете указать его сейчас или позже через редактирование заказа</div>
       </div>
       <button class="btn-primary btn-block btn-lg" id="confirmPayBtn">Я перевёл средства</button>
-    `
+    `);
     $('#modalRoot [data-close]').onclick = closeModal;
     $('#confirmPayBtn').onclick = async () => {
       const proof = $('#paymentProof').value.trim();
