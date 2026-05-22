@@ -217,11 +217,19 @@ img{max-width:100%;display:block}
 .hero .deco{position:absolute;right:-50px;bottom:-50px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.08)}
 .hero .deco2{position:absolute;right:80px;top:-40px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.07)}
 
+/* Google OAuth button */
+.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px 20px;border-radius:10px;border:2px solid var(--line);background:#fff;color:#1f2937;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s ease;min-height:48px}
+.btn-google:hover{border-color:#dadce0;background:#f8f9fa;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.btn-google svg{flex-shrink:0;width:20px;height:20px}
+.btn-google:active{transform:translateY(0)}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:14px 0;color:var(--gray);font-size:13px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--line)}
+
 /* metric tiles */
 .metric-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
 .tile{background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:18px}
 .tile .label{color:var(--gray);font-size:13px}
-.tile .value{font-size:24px;font-weight:700;margin-top:4px;color:#000}
+.tile .value{font-family:'Inter',system-ui,sans-serif;font-size:32px;font-weight:800;margin-top:4px;color:#000;letter-spacing:-.5px;line-height:1.1}
 
 /* task / service cards */
 .list-card{
@@ -926,37 +934,37 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
 [data-theme="dark"] .modal, [data-theme="dark"] .chat-pane, [data-theme="dark"] .chat-list,
 [data-theme="dark"] .chat-item, [data-theme="dark"] .stat-card, [data-theme="dark"] .review,
 [data-theme="dark"] .offer-card, [data-theme="dark"] .offer-empty, [data-theme="dark"] .proposal-card,
-[data-theme="dark"] .empty-state,
+[data-theme="dark"] .empty-state, [data-theme="dark"] .btn-google,
 [data-theme="pirate"] .card, [data-theme="pirate"] .list-card, [data-theme="pirate"] .svc-card,
 [data-theme="pirate"] .modal, [data-theme="pirate"] .chat-pane, [data-theme="pirate"] .chat-list,
 [data-theme="pirate"] .chat-item, [data-theme="pirate"] .stat-card, [data-theme="pirate"] .review,
 [data-theme="pirate"] .offer-card, [data-theme="pirate"] .offer-empty, [data-theme="pirate"] .proposal-card,
-[data-theme="pirate"] .empty-state,
+[data-theme="pirate"] .empty-state, [data-theme="pirate"] .btn-google,
 [data-theme="ocean"] .card, [data-theme="ocean"] .list-card, [data-theme="ocean"] .svc-card,
 [data-theme="ocean"] .modal, [data-theme="ocean"] .chat-pane, [data-theme="ocean"] .chat-list,
 [data-theme="ocean"] .chat-item, [data-theme="ocean"] .stat-card, [data-theme="ocean"] .review,
 [data-theme="ocean"] .offer-card, [data-theme="ocean"] .offer-empty, [data-theme="ocean"] .proposal-card,
-[data-theme="ocean"] .empty-state,
+[data-theme="ocean"] .empty-state, [data-theme="ocean"] .btn-google,
 [data-theme="mage"] .card, [data-theme="mage"] .list-card, [data-theme="mage"] .svc-card,
 [data-theme="mage"] .modal, [data-theme="mage"] .chat-pane, [data-theme="mage"] .chat-list,
 [data-theme="mage"] .chat-item, [data-theme="mage"] .stat-card, [data-theme="mage"] .review,
 [data-theme="mage"] .offer-card, [data-theme="mage"] .offer-empty, [data-theme="mage"] .proposal-card,
-[data-theme="mage"] .empty-state,
+[data-theme="mage"] .empty-state, [data-theme="mage"] .btn-google,
 [data-theme="gothic"] .card, [data-theme="gothic"] .list-card, [data-theme="gothic"] .svc-card,
 [data-theme="gothic"] .modal, [data-theme="gothic"] .chat-pane, [data-theme="gothic"] .chat-list,
 [data-theme="gothic"] .chat-item, [data-theme="gothic"] .stat-card, [data-theme="gothic"] .review,
 [data-theme="gothic"] .offer-card, [data-theme="gothic"] .offer-empty, [data-theme="gothic"] .proposal-card,
-[data-theme="gothic"] .empty-state,
+[data-theme="gothic"] .empty-state, [data-theme="gothic"] .btn-google,
 [data-theme="forest"] .card, [data-theme="forest"] .list-card, [data-theme="forest"] .svc-card,
 [data-theme="forest"] .modal, [data-theme="forest"] .chat-pane, [data-theme="forest"] .chat-list,
 [data-theme="forest"] .chat-item, [data-theme="forest"] .stat-card, [data-theme="forest"] .review,
 [data-theme="forest"] .offer-card, [data-theme="forest"] .offer-empty, [data-theme="forest"] .proposal-card,
-[data-theme="forest"] .empty-state,
+[data-theme="forest"] .empty-state, [data-theme="forest"] .btn-google,
 [data-theme="sunset"] .card, [data-theme="sunset"] .list-card, [data-theme="sunset"] .svc-card,
 [data-theme="sunset"] .modal, [data-theme="sunset"] .chat-pane, [data-theme="sunset"] .chat-list,
 [data-theme="sunset"] .chat-item, [data-theme="sunset"] .stat-card, [data-theme="sunset"] .review,
 [data-theme="sunset"] .offer-card, [data-theme="sunset"] .offer-empty, [data-theme="sunset"] .proposal-card,
-[data-theme="sunset"] .empty-state{
+[data-theme="sunset"] .empty-state, [data-theme="sunset"] .btn-google{
   background:var(--t-surface);border-color:var(--t-line);color:var(--t-text);
 }
 [data-theme="dark"] .chat-item:hover, [data-theme="pirate"] .chat-item:hover, [data-theme="ocean"] .chat-item:hover,
@@ -1158,7 +1166,7 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
 
 /* tile/stat label + value */
 [data-theme="dark"] .tile .value, [data-theme="pirate"] .tile .value, [data-theme="ocean"] .tile .value,
-[data-theme="mage"] .tile .value, [data-theme="gothic"] .tile .value, [data-theme="forest"] .tile .value, [data-theme="sunset"] .tile .value{color:var(--t-text)}
+[data-theme="mage"] .tile .value, [data-theme="gothic"] .tile .value, [data-theme="forest"] .tile .value, [data-theme="sunset"] .tile .value{font-family:'Inter',system-ui,sans-serif;font-size:32px;font-weight:800;letter-spacing:-.5px;line-height:1.1;color:var(--t-text)}
 [data-theme="dark"] .tile .label, [data-theme="pirate"] .tile .label, [data-theme="ocean"] .tile .label,
 [data-theme="mage"] .tile .label, [data-theme="gothic"] .tile .label, [data-theme="forest"] .tile .label, [data-theme="sunset"] .tile .label{color:var(--t-muted)}
 
@@ -1335,7 +1343,7 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
   /* — Stats — */
   .metric-tiles{grid-template-columns:repeat(2,1fr);gap:10px}
   .tile{padding:14px 12px}
-  .tile .value{font-size:22px}
+  .tile .value{font-size:26px}
   .tile .label{font-size:12px}
 
   /* — Filter card / page title — */
@@ -1497,6 +1505,9 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
 .portfolio-item .p-actions{display:flex;gap:8px;margin-top:8px}
 .portfolio-empty{text-align:center;padding:40px 20px;color:var(--gray)}
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
   const SUPABASE_URL = 'https://cloyutdjfyarifvhhkga.supabase.co';
@@ -3435,9 +3446,20 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
         </div>
         <button class="btn-primary btn-block btn-lg" type="submit">Создать аккаунт</button>
       </form>
+      <div class="auth-divider">или</div>
+      <button class="btn-google" id="googleRegisterBtn">
+        <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H42V20H24v8h11.3c-1.1 3.4-4 5.8-7.6 6.6l.1.1 6.2 4.8.4.2C39.2 36.4 44 30.8 44 24c0-1.4-.1-2.8-.4-4z"/><path fill="#FF3D00" d="M10.5 28.2 10.4 28.2l-6.2-4.8-.2-.2C3.1 25.3 3 26.7 3 28c0 5.2 2.1 10 5.6 13.4l.1-.1 6.2-4.8.1-.1C13.1 34.2 11.5 31.3 10.5 28.2z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.8l-6.2-4.8c-1.8 1.2-4.1 2-6.7 2-3.1 0-5.9-1.2-8-3.2l-.1.1-6.2 4.8-.1.1C11.9 40.4 17.6 44 24 44z"/><path fill="#1976D2" d="M24 12c3.1 0 5.9 1.2 8 3.2l.1-.1 5.5-5.5.1-.1C33.8 6.4 29.1 4 24 4 17.6 4 11.9 7.6 8.9 12.6l.1.1 6.2 4.8.1-.1C14.8 16.3 16.3 13.3 19 11.7 20.5 10.7 22.2 12 24 12z"/></svg>
+        <span>Войти через Google</span>
+      </button>
       <div class="switch-link">Уже есть аккаунт? <a data-switch="login">Войти</a></div>
     `);
     bindAuthCommon();
+    $('#googleRegisterBtn').onclick = () => {
+      sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'https://dzektomas059-ctrl.github.io/minilit-freelance/' }
+      });
+    };
     const picker = $('[data-role-picker]');
     picker.addEventListener('click', e => {
       const c = e.target.closest('.chip'); if (!c) return;
