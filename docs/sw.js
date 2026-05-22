@@ -10,7 +10,7 @@
  * Version bumps invalidate old caches automatically.
  */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const STATIC_CACHE  = `minilit-static-${VERSION}`;
 const RUNTIME_CACHE = `minilit-runtime-${VERSION}`;
 
