@@ -1,0 +1,6 @@
+*.zip
+*.log
+node_modules
+.env
+__pycache__
+*.pyc
