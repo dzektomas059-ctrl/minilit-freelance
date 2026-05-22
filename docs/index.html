@@ -295,8 +295,8 @@ img{max-width:100%;display:block}
 /* avatars */
 .avi{width:40px;height:40px;border-radius:50%;background:#e6e9ee;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:14px;background-size:cover;background-position:center;overflow:hidden;flex:0 0 40px}
 .avi img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.avi.lg{width:80px;height:80px;font-size:26px}
-.avi.xl{width:120px;height:120px;font-size:38px}
+.avi.lg{width:80px;height:80px;font-size:26px;flex:0 0 80px}
+.avi.xl{width:120px;height:120px;font-size:38px;flex:0 0 120px}
 
 /* profile */
 .profile-head{display:flex;gap:24px;align-items:flex-start}
@@ -3030,7 +3030,7 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
     if (!user) return '';
     const base = 'background-size:cover;background-position:center;';
     if (user.avatar) return base + `background-image:url('${user.avatar}');`;
-    return base + `background:${colorFor(user.id||user.name)};`;
+    return base + `background-color:${colorFor(user.id||user.name)};`;
   }
   function aviHTML(user, cls=''){
     if (!user) return `<span class="avi-wrap ${cls}"><div class="avi ${cls}">?</div></span>`;
@@ -5970,14 +5970,19 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
       fr.onload = () => {
         avatar = fr.result;
         const p = $('#aviPreview');
-        p.style.background = `url('${avatar}') center/cover`;
+        p.style.backgroundImage = `url('${avatar}')`;
+        p.style.backgroundSize = 'cover';
+        p.style.backgroundPosition = 'center';
         p.textContent = '';
       };
       fr.readAsDataURL(file);
     });
     $('#aviClear')?.addEventListener('click', () => {
       avatar=''; pendingFile = null;
-      const p=$('#aviPreview'); p.style.background = colorFor(me.id); p.textContent = initials(me.name);
+      const p=$('#aviPreview');
+      p.style.backgroundImage = 'none';
+      p.style.backgroundColor = colorFor(me.id);
+      p.textContent = initials(me.name);
     });
 
     const picker = $('[data-role-picker]');
