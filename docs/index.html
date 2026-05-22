@@ -1833,34 +1833,38 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
 
     /* ===== bootstrap ===== */
     async init(){
-      const { data:{ session } } = await sb.auth.getSession();
-      this.state.session = session?.user?.id || null;
-      await this.fetchAll();
-      this.subscribeRealtime();
-      sb.auth.onAuthStateChange(async (event, sess) => {
-        if (event === 'PASSWORD_RECOVERY'){
-          closeModal();
-          try { window.location.hash = '#home'; } catch(_){}
-          setTimeout(() => showSetNewPassword(), 100);
-          return;
-        }
-        const newId = sess?.user?.id || null;
-        // always refresh realtime JWT so postgres_changes RLS uses the
-        // current user (token may rotate via TOKEN_REFRESHED too)
-        try { if (sess?.access_token) sb.realtime.setAuth(sess.access_token); } catch(_){}
-        if (newId !== this.state.session){
-          this.state.session = newId;
-          await this.fetchAll();
-          await this.subscribeRealtime();
-          renderTopActions();
-          render();
-          if (newId) this.touchOnline();
-        }
-      });
-      if (this.state.session) this.touchOnline();
-      // online heartbeat
-      setInterval(() => { if (this.state.session) this.touchOnline(); }, 60_000);
-      this.state.ready = true;
+      try {
+        const { data:{ session } } = await sb.auth.getSession();
+        this.state.session = session?.user?.id || null;
+        await this.fetchAll();
+        this.subscribeRealtime();
+        sb.auth.onAuthStateChange(async (event, sess) => {
+          if (event === 'PASSWORD_RECOVERY'){
+            closeModal();
+            try { window.location.hash = '#home'; } catch(_){}
+            setTimeout(() => showSetNewPassword(), 100);
+            return;
+          }
+          const newId = sess?.user?.id || null;
+          try { if (sess?.access_token) sb.realtime.setAuth(sess.access_token); } catch(_){}
+          if (newId !== this.state.session){
+            this.state.session = newId;
+            await this.fetchAll();
+            await this.subscribeRealtime();
+            renderTopActions();
+            render();
+            if (newId) this.touchOnline();
+          }
+        });
+        if (this.state.session) this.touchOnline();
+        setInterval(() => { if (this.state.session) this.touchOnline(); }, 60_000);
+        this.state.ready = true;
+      } catch(e){
+        console.warn('Backend unavailable, showing demo:', e.message);
+        this.state.ready = true;
+        this.state.demo = true;
+        render();
+      }
     },
 
     async fetchAll(){
