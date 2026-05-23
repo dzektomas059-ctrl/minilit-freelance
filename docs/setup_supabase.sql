@@ -548,6 +548,6 @@ BEGIN
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'profiles' AND column_name = 'connects_remaining'
   ) THEN
-    ALTER TABLE profiles ADD COLUMN connects_remaining int not null default 30;
+    ALTER TABLE profiles ADD COLUMN connects_remaining int not null default 50;
   END IF;
 END $$;
