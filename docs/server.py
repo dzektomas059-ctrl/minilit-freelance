@@ -14,7 +14,7 @@ class NoCacheHandler(SimpleHTTPRequestHandler):
     def guess_type(self, path):
         base, ext = os.path.splitext(path)
         if ext == '.html':
-            return 'text/html'
+            return 'text/html; charset=utf-8'
         return SimpleHTTPRequestHandler.guess_type(self, path)
 
 if __name__ == '__main__':
