@@ -10,7 +10,7 @@
  * Version bumps invalidate old caches automatically.
  */
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const STATIC_CACHE  = `minilit-static-${VERSION}`;
 const RUNTIME_CACHE = `minilit-runtime-${VERSION}`;
 
@@ -169,9 +169,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2) Same-origin static → cache-first.
+  // 2) Same-origin static → cache-first, but index.html is network-first.
   const sameOrigin = url.origin === self.location.origin;
   if (sameOrigin) {
+    // For index.html always try network first (avoids stale cache after deploy)
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+      event.respondWith((async () => {
+        const cache = await caches.open(STATIC_CACHE);
+        try {
+          const fresh = await fetch(req, { cache: 'no-cache' });
+          if (fresh && fresh.ok) {
+            cache.put(req, fresh.clone()).catch(() => {});
+          }
+          return fresh;
+        } catch (_) {
+          const cached = await cache.match(req);
+          if (cached) return cached;
+          if (isHTMLNavigation(req)) {
+            return new Response(OFFLINE_HTML, {
+              status: 200,
+              headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            });
+          }
+          throw _;
+        }
+      })());
+      return;
+    }
     event.respondWith((async () => {
       const cache = await caches.open(STATIC_CACHE);
       const cached = await cache.match(req);
