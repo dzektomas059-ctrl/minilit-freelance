@@ -444,3 +444,110 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+-- Add new tables to Realtime publication
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'tavern_projects'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE tavern_projects;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'tavern_proposals'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE tavern_proposals;
+  END IF;
+END $$;
+
+-- ============================================================
+-- 21. Таверна — Таблица проектов (биржи заказов)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tavern_projects (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text not null,
+  budget int,
+  category text not null,
+  client_id uuid not null references profiles(id) on delete cascade,
+  status text default 'open' check (status in ('open','closed','cancelled')),
+  proposal_count int default 0,
+  created_at timestamptz default now(),
+  closed_at timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS idx_tavern_projects_category ON tavern_projects (category);
+CREATE INDEX IF NOT EXISTS idx_tavern_projects_client ON tavern_projects (client_id);
+CREATE INDEX IF NOT EXISTS idx_tavern_projects_status ON tavern_projects (status);
+CREATE INDEX IF NOT EXISTS idx_tavern_projects_created ON tavern_projects (created_at desc);
+
+ALTER TABLE tavern_projects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "tavern_projects: select all" ON tavern_projects;
+CREATE POLICY "tavern_projects: select all" ON tavern_projects
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "tavern_projects: insert auth" ON tavern_projects;
+CREATE POLICY "tavern_projects: insert auth" ON tavern_projects
+  FOR INSERT WITH CHECK (auth.uid() = client_id);
+
+DROP POLICY IF EXISTS "tavern_projects: update owner" ON tavern_projects;
+CREATE POLICY "tavern_projects: update owner" ON tavern_projects
+  FOR UPDATE USING (auth.uid() = client_id);
+
+DROP POLICY IF EXISTS "tavern_projects: delete owner" ON tavern_projects;
+CREATE POLICY "tavern_projects: delete owner" ON tavern_projects
+  FOR DELETE USING (auth.uid() = client_id);
+
+-- ============================================================
+-- 22. Таверна — Таблица откликов на проекты
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tavern_proposals (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references tavern_projects(id) on delete cascade,
+  freelancer_id uuid not null references profiles(id) on delete cascade,
+  cover_letter text not null,
+  price int not null,
+  status text default 'pending' check (status in ('pending','accepted','rejected','withdrawn')),
+  created_at timestamptz default now(),
+  unique (project_id, freelancer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tavern_proposals_project ON tavern_proposals (project_id);
+CREATE INDEX IF NOT EXISTS idx_tavern_proposals_freelancer ON tavern_proposals (freelancer_id);
+
+ALTER TABLE tavern_proposals ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "tavern_proposals: select all" ON tavern_proposals;
+CREATE POLICY "tavern_proposals: select all" ON tavern_proposals
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "tavern_proposals: insert freelancer" ON tavern_proposals;
+CREATE POLICY "tavern_proposals: insert freelancer" ON tavern_proposals
+  FOR INSERT WITH CHECK (
+    auth.uid() = freelancer_id AND
+    exists (select 1 from tavern_projects where id = project_id and status = 'open')
+  );
+
+DROP POLICY IF EXISTS "tavern_proposals: update freelancer" ON tavern_proposals;
+CREATE POLICY "tavern_proposals: update freelancer" ON tavern_proposals
+  FOR UPDATE USING (auth.uid() = freelancer_id);
+
+DROP POLICY IF EXISTS "tavern_proposals: update client" ON tavern_proposals;
+CREATE POLICY "tavern_proposals: update client" ON tavern_proposals
+  FOR UPDATE USING (auth.uid() in (select client_id from tavern_projects where id = project_id));
+
+-- ============================================================
+-- 23. Добавляем connects_remaining в profiles
+-- ============================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'profiles' AND column_name = 'connects_remaining'
+  ) THEN
+    ALTER TABLE profiles ADD COLUMN connects_remaining int not null default 30;
+  END IF;
+END $$;
