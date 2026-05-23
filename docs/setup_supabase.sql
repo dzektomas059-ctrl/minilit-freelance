@@ -3,6 +3,35 @@
 -- Выполните ВСЁ содержимое этого файла в Supabase Dashboard > SQL Editor
 -- ============================================================
 
+-- 0. Создаём основные таблицы (если не существуют)
+CREATE TABLE IF NOT EXISTS chats (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references profiles(id) on delete cascade,
+  freelancer_id uuid not null references profiles(id) on delete cascade,
+  job_id uuid references jobs(id) on delete set null,
+  order_id uuid references orders(id) on delete set null,
+  last_text text,
+  last_at timestamptz,
+  created_at timestamptz default now(),
+  unique (client_id, freelancer_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id uuid primary key default gen_random_uuid(),
+  chat_id uuid not null references chats(id) on delete cascade,
+  sender_id uuid not null references profiles(id) on delete cascade,
+  text text not null,
+  read boolean not null default false,
+  delivered_at timestamptz,
+  read_at timestamptz,
+  created_at timestamptz default now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages (chat_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages (created_at);
+CREATE INDEX IF NOT EXISTS idx_chats_client ON chats (client_id);
+CREATE INDEX IF NOT EXISTS idx_chats_freelancer ON chats (freelancer_id);
+
 -- 1. Добавляем cover_url в profiles (если ещё нет)
 DO $$
 BEGIN
@@ -403,7 +432,7 @@ END $$;
 DO $$
 DECLARE
   tbl text;
-  tables text[] := ARRAY['notifications','complaints','withdrawals','messages','reviews','orders','chats'];
+  tables text[] := ARRAY['notifications','complaints','withdrawals','messages','reviews','orders','chats','jobs','services','applications','profiles','proposals','bookmarks','portfolio'];
 BEGIN
   FOREACH tbl IN ARRAY tables
   LOOP
