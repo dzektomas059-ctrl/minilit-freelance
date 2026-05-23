@@ -18,8 +18,8 @@
     { "src": "./icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Биржа",       "short_name": "Биржа",       "url": "/exchange",   "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Мои задания", "short_name": "Мои задания", "url": "/mytasks",    "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Сообщения",   "short_name": "Чат",         "url": "/messages",   "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Биржа",       "short_name": "Биржа",       "url": "./exchange",   "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Мои задания", "short_name": "Мои задания", "url": "./mytasks",    "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Сообщения",   "short_name": "Чат",         "url": "./messages",   "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }
