@@ -29,6 +29,17 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages (chat_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created ON messages (created_at);
+
+-- 0a. Добавляем image_url в messages (для отправки картинок в чат)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'messages' AND column_name = 'image_url'
+  ) THEN
+    ALTER TABLE messages ADD COLUMN image_url text;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_chats_client ON chats (client_id);
 CREATE INDEX IF NOT EXISTS idx_chats_freelancer ON chats (freelancer_id);
 
