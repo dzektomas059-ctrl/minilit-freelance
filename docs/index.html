@@ -138,21 +138,21 @@ img{max-width:100%;display:block}
 /* sub categories */
 /* category bar / guilds (replaces old .subnav) */
 .category-bar-wrapper{background:var(--t-bar,#fff);border-bottom:1px solid var(--t-line,rgba(0,0,0,.08));padding:12px 0;width:100%;overflow:hidden}
-.category-bar-scroll{display:flex;justify-content:center;gap:24px;overflow-x:auto;white-space:nowrap;padding:0 20px;scrollbar-width:none}
+.category-bar-scroll{display:flex;justify-content:center;gap:12px!important;overflow-x:auto;white-space:nowrap;padding:0 20px;scrollbar-width:none;flex-wrap:nowrap}
 .category-bar-scroll::-webkit-scrollbar{display:none}
-.category-link{color:var(--t-bar-text,#555);text-decoration:none;font-size:.95rem;font-weight:500;transition:all .3s cubic-bezier(.25,1,.5,1);position:relative;padding:4px 0}
-.category-link:hover,.category-link.active{color:var(--green,#1DBF73)!important}
+.category-link{color:var(--t-bar-text,#555);text-decoration:none!important;font-size:.85rem!important;font-weight:500;transition:all .3s cubic-bezier(.25,1,.5,1);position:relative;padding:4px 6px!important;letter-spacing:-.01em;display:inline-flex;align-items:center}
+.category-link:hover,.category-link:focus,.category-link.active,.category-link[class*="active"]{color:var(--green,#1DBF73)!important;text-decoration:none!important}
 .category-link::after{content:'';position:absolute;bottom:0;left:0;width:0;height:2px;background:#1DBF73;transition:width .3s ease}
 .category-link:hover::after,.category-link.active::after{width:100%}
-.category-link.dota-category-accent{color:var(--t-bar-text,#555);font-weight:600;display:inline-flex;align-items:center;gap:6px;background:rgba(224,68,68,.05);padding:4px 12px;border-radius:6px;border:1px solid rgba(224,68,68,.15);transition:all .3s ease}
+.category-link.dota-category-accent{color:var(--t-bar-text,#555);font-weight:600;display:inline-flex;align-items:center;gap:6px;background:rgba(224,68,68,.05);padding:3px 10px!important;border-radius:6px;border:1px solid rgba(224,68,68,.15);transition:all .3s ease;font-size:.85rem!important}
 .category-link.dota-category-accent:hover{color:#ff4a4a!important;border-color:rgba(255,74,74,.4);background:rgba(255,74,74,.1);box-shadow:0 0 10px rgba(255,74,74,.15)}
 .category-link.dota-category-accent::after{display:none}
 .dota-dot{width:6px;height:6px;background:#ff4a4a;border-radius:50%;display:inline-block;box-shadow:0 0 8px #ff4a4a;animation:dotaPulse 2s infinite}
 @keyframes dotaPulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.3);opacity:1}}
-@media(max-width:992px){.category-bar-scroll{justify-content:flex-start;gap:16px}}
+@media(max-width:992px){.category-bar-scroll{justify-content:flex-start;gap:10px}}
 [data-theme="dark"] .category-bar-wrapper{background:#111;border-bottom-color:rgba(255,255,255,.03)}
 [data-theme="dark"] .category-link{color:#8c8c8c}
-[data-theme="dark"] .category-link:hover,[data-theme="dark"] .category-link.active{color:#fff!important}
+[data-theme="dark"] .category-link:hover,[data-theme="dark"] .category-link:focus,[data-theme="dark"] .category-link.active,[data-theme="dark"] .category-link[class*="active"]{color:#fff!important}
 [data-theme="dark"] .category-link.dota-category-accent{color:#e2e8f0}
 /* ---------- layout ---------- */
 .container{width:1200px;margin:0 auto;padding:24px 16px}
@@ -873,7 +873,6 @@ html{scroll-behavior:smooth}
 [data-theme="dark"] .nav a:hover, [data-theme="dark"] .nav a.active{color:var(--green)}
 [data-theme="dark"] .search input{background:var(--t-search);border-color:var(--t-line);color:var(--t-text)}
 [data-theme="dark"] .search input::placeholder{color:var(--t-muted)}
-[data-theme="dark"] .category-bar-wrapper{background:var(--t-bar);border-bottom-color:var(--t-line)}
 [data-theme="dark"] .icon-btn{color:var(--t-bar-text)}
 [data-theme="dark"] .user-trigger{color:var(--t-text)}
 [data-theme="dark"] .dropdown{background:var(--t-surface);border-color:var(--t-line);box-shadow:var(--t-dd-shadow)}
@@ -4073,10 +4072,6 @@ html{scroll-behavior:smooth}
     const myResponses = me ? new Set(App.state.responses.filter(r => r.freelancerId === me.id).map(r => r.taskId)) : new Set();
     return `
     <div class="container">
-      <div class="category-bar-wrapper"><div class="category-bar-scroll">
-        <a class="category-link ${!cat?'active':''}" href="#services" data-link>Все</a>
-        ${CATS.map(c => `<a class="category-link ${c.id==='gaming'?'dota-category-accent':''} ${c.id===cat?'active':''}" href="#services?cat=${c.id}" data-link>${c.id==='gaming'?'<span class="dota-dot"></span>':''}${esc(c.name)}</a>`).join('')}
-      </div></div>
       <div class="page-title">
         <h1>Биржа заданий</h1>
         ${me ? `<button class="btn-primary" id="btnNewTask">+ Разместить задание</button>` : `<button class="btn-primary" id="btnNewTask">+ Разместить задание</button>`}
