@@ -634,17 +634,24 @@ body.is-offer .category-bar-scroll{width:auto;max-width:1100px;padding:0 20px;fl
 [data-theme="dark"] .connects-widget{background:var(--t-surface-2,#222);color:var(--green)}
 .quests-trigger{background:none;border:none;cursor:pointer;font-size:20px;padding:4px 8px;border-radius:8px;transition:all .2s;line-height:1}
 .quests-trigger:hover{background:rgba(255,255,255,.08);transform:scale(1.1)}
-/* quests modal */
+/* quests modal v2 */
+.quests-modal h2{margin:0 0 4px}
 .quests-list{display:flex;flex-direction:column;gap:12px;margin:16px 0}
-.quest-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--t-surface,#1a1a1a);border:1px solid var(--t-line,#333);border-radius:12px;transition:all .2s}
-.quest-item.completed{opacity:.6;border-color:var(--green)}
-.quest-icon{font-size:22px;width:36px;text-align:center}
-.quest-body{flex:1}
-.quest-label{font-size:14px;font-weight:600;color:var(--t-text,#fff)}
-.quest-reward{font-size:12px;color:var(--green);margin-top:2px}
-.quest-done{font-size:12px;color:var(--green)}
-.quest-pending{font-size:12px;color:#888}
-.quests-footer{text-align:center;font-size:14px;color:#888;padding-top:12px;border-top:1px solid var(--t-line,#333);margin-top:8px}
+.quest-item{display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--t-surface,#1a1a1a);border:1px solid var(--t-line,#333);border-radius:12px;transition:all .2s}
+.q-icon{font-size:24px;width:36px;text-align:center;flex-shrink:0;padding-top:2px}
+.q-body{flex:1;min-width:0}
+.q-label{font-size:14px;font-weight:600;color:var(--t-text,#fff);margin-bottom:6px}
+.q-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.q-bar{flex:1;height:6px;background:var(--t-line,#333);border-radius:3px;overflow:hidden}
+.q-bar-fill{height:100%;background:var(--green,#1DBF73);border-radius:3px;transition:width .5s ease}
+.q-counter{font-size:11px;color:#888;white-space:nowrap;font-variant-numeric:tabular-nums}
+.q-reward{font-size:12px;color:var(--green)}
+.q-status{flex-shrink:0;margin-left:auto}
+.q-badge{font-size:12px;padding:4px 10px;border-radius:6px;white-space:nowrap}
+.q-badge.q-progress{background:rgba(255,255,255,.05);color:#888}
+.q-badge.q-done{background:rgba(29,191,115,.1);color:var(--green)}
+.q-claim-btn{font-size:12px!important;padding:6px 12px!important}
+.quests-footer{text-align:center;font-size:13px;color:#888;padding-top:12px;border-top:1px solid var(--t-line,#333);margin-top:8px}
 .balance-dropdown{
   position:absolute;top:46px;right:0;min-width:230px;background:#fff;border:1px solid var(--line);
   border-radius:10px;box-shadow:var(--shadow-md);padding:14px;display:none;z-index:60;
@@ -1838,51 +1845,83 @@ html{scroll-behavior:smooth}
       btn.classList.remove('recording-active');
     }
   }
-  /* ===== daily quests ===== */
-  const dailyQuests = {
-    checkTavern: { id:"checkTavern", label:"Зайти в Таверну проектов", reward:1, completed:false },
-    updateStatus: { id:"updateStatus", label:"Обновить свой статус активности", reward:1, completed:false },
-    sendChat: { id:"sendChat", label:"Отправить сообщение в чате", reward:2, completed:false }
+  /* ===== daily quests v2 (smart, per-role) ===== */
+  const QUEST_POOLS = {
+    freelancer: [
+      { id:'respondTavern', label:'Откликнуться на 1 проект в Таверне', target:1, reward:5, icon:'⚔️' },
+      { id:'sendChat', label:'Отправить 5 сообщений в чате', target:5, reward:3, icon:'💬' },
+      { id:'addPortfolio', label:'Добавить 1 работу в портфолио', target:1, reward:5, icon:'🖼️' },
+      { id:'changeStatus', label:'Изменить статус в профиле', target:1, reward:2, icon:'🔄' },
+    ],
+    client: [
+      { id:'createTask', label:'Создать 1 новое задание на бирже', target:1, reward:5, icon:'📋' },
+      { id:'viewProfiles', label:'Просмотреть 3 профиля фрилансеров', target:3, reward:2, icon:'👤' },
+      { id:'writeFirstMsg', label:'Написать первое сообщение исполнителю', target:1, reward:3, icon:'✉️' },
+      { id:'makeOrder', label:'Оформить 1 сделку/заказ', target:1, reward:10, icon:'🤝' },
+    ]
   };
-  function initDailyQuests(){
-    const today = new Date().toDateString();
-    if(localStorage.getItem('quests_date')!==today){
-      localStorage.setItem('quests_date', today);
-      localStorage.setItem('daily_quests_state', JSON.stringify(dailyQuests));
-    }
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  function getQuestKey(){ const u=App.me(); return 'quests_'+((u&&u.id)||'anon'); }
+  function getDateKey(){ return 'quests_date_'+((App.me()&&App.me().id)||'anon'); }
+  function generateDailyQuests(){
+    const me=App.me(); const pool=QUEST_POOLS[me&&me.role]||QUEST_POOLS.freelancer;
+    const picked=shuffle([...pool]).slice(0,3);
+    return picked.map(q=>({...q,progress:0,claimed:false}));
   }
-  function getQuestState(){ return JSON.parse(localStorage.getItem('daily_quests_state')||'{}'); }
-  function completeQuest(questId){
-    initDailyQuests();
-    const state = getQuestState();
-    if(state[questId] && !state[questId].completed){
-      state[questId].completed = true;
-      localStorage.setItem('daily_quests_state', JSON.stringify(state));
-      addConnects(state[questId].reward);
-      showCustomNotification("Квест выполнен!","Вы получили +"+state[questId].reward+" коннектов за квест: «"+state[questId].label+"»","success");
+  function getQuests(){
+    const today=new Date().toDateString();
+    if(localStorage.getItem(getDateKey())!==today){
+      localStorage.setItem(getDateKey(),today);
+      const qs=generateDailyQuests(); localStorage.setItem(getQuestKey(),JSON.stringify(qs)); return qs;
     }
+    try{ return JSON.parse(localStorage.getItem(getQuestKey())); }catch(e){ return generateDailyQuests(); }
   }
-  async function addConnects(amount){
-    const uid = App.me()?.id;
-    if(!uid) return;
-    const { data } = await sb.from('profiles').select('connects_remaining').eq('id', uid).single();
+  function saveQuests(qs){ localStorage.setItem(getQuestKey(),JSON.stringify(qs)); }
+  function incrementQuestProgress(questId,amount){
+    amount=amount||1; const qs=getQuests(); let changed=false;
+    qs.forEach(q=>{ if(q.id===questId && !q.claimed && q.progress<q.target){ q.progress=Math.min(q.target,q.progress+amount); changed=true; } });
+    if(changed){ saveQuests(qs); if(typeof playNotificationSound==='function')playNotificationSound(); }
+  }
+  async function claimQuestReward(questId){
+    const qs=getQuests(); const q=qs.find(x=>x.id===questId); if(!q||q.claimed||q.progress<q.target) return;
+    q.claimed=true; saveQuests(qs);
+    const uid=App.me()?.id; if(!uid) return;
+    const {data}=await sb.from('profiles').select('connects_remaining').eq('id',uid).single();
     if(data){
-      const nc = (data.connects_remaining||50) + amount;
-      await sb.from('profiles').update({ connects_remaining: nc }).eq('id', uid);
-      if(App.me()) App.me().connectsRemaining = nc;
-      const w = document.querySelector('#connectsCount, .connects-count');
-      if(w) w.textContent = nc;
+      const nc=(data.connects_remaining||50)+q.reward;
+      await sb.from('profiles').update({connects_remaining:nc}).eq('id',uid);
+      if(App.me())App.me().connectsRemaining=nc;
+      const w=document.querySelector('#connectsCount, .connects-count'); if(w)w.textContent=nc;
     }
+    showQuestsModal();
+    showCustomNotification('Награда получена!','Вы получили +'+q.reward+' коннектов за «'+q.label+'»','success');
+  }
+  function timeToMidnight(){
+    const n=new Date(); return new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,0,0,0)-n;
+  }
+  function formatCountdown(ms){
+    const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000), s=Math.floor((ms%60000)/1000);
+    return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
   }
   function showQuestsModal(){
-    initDailyQuests();
-    const state = getQuestState();
-    const totalDone = Object.values(state).filter(q=>q.completed).length;
-    const totalAll = Object.keys(state).length;
-    openModal('<button class="close" data-close>&times;</button><h2>📅 Ежедневные квесты</h2><p class="sub">Выполняй задания и зарабатывай коннекты каждый день!</p><div class="quests-list">'+
-      Object.values(state).map(q => '<div class="quest-item '+(q.completed?'completed':'')+'"><div class="quest-icon">'+(q.completed?'✅':'📋')+'</div><div class="quest-body"><div class="quest-label">'+q.label+'</div><div class="quest-reward">+'+(q.reward)+' коннект'+(q.reward>1?'а':'')+'</div></div>'+(q.completed?'<span class="quest-done">Выполнено</span>':'<span class="quest-pending">Не выполнено</span>')+'</div>').join('')+
-      '</div><div class="quests-footer">Выполнено: '+totalDone+'/'+totalAll+'</div>');
+    const qs=getQuests(); const totalDone=qs.filter(q=>q.claimed).length;
+    const totalAll=qs.length; const me=App.me();
+    openModal('<button class="close" data-close>&times;</button><div class="quests-modal"><h2>🎯 Ежедневные квесты</h2><p class="sub">'+(me?'Выполняй задания и зарабатывай коннекты':'Войди, чтобы получать квесты')+'</p><div class="quests-list">'+
+      qs.map(q=>{
+        const pct=Math.round((q.progress/q.target)*100);
+        const statusHtml=q.claimed?'<span class="q-badge q-done">✅ Выполнено</span>':(q.progress>=q.target?'<button class="btn-primary btn-sm q-claim-btn" onclick="claimQuestReward(\''+q.id+'\')">🎁 Забрать награду</button>':'<span class="q-badge q-progress">В процессе</span>');
+        return '<div class="quest-item"><div class="q-icon">'+q.icon+'</div><div class="q-body"><div class="q-label">'+q.label+'</div><div class="q-bar-wrap"><div class="q-bar"><div class="q-bar-fill" style="width:'+pct+'%"></div></div><span class="q-counter">'+q.progress+'/'+q.target+'</span></div><div class="q-reward">+'+(q.reward)+' коннект'+(q.reward>1?'ов':'')+'</div></div><div class="q-status">'+statusHtml+'</div></div>';
+      }).join('')+
+      '</div><div class="quests-footer">Выполнено: '+totalDone+'/'+totalAll+' · До обновления: <span id="questsTimer">'+formatCountdown(timeToMidnight())+'</span></div></div>');
     $('[data-close]').onclick = closeModal;
+    if(document.getElementById('questsTimer')){
+      const iv=setInterval(()=>{
+        const t=document.getElementById('questsTimer');
+        if(!t){ clearInterval(iv); return; }
+        const left=timeToMidnight(); t.textContent=formatCountdown(left);
+        if(left<=0){ clearInterval(iv); location.reload(); }
+      },1000);
+    }
   }
   function changeUserStatus(status){
     const dot = document.querySelector('.status-indicator-dot');
@@ -1895,7 +1934,7 @@ html{scroll-behavior:smooth}
     localStorage.setItem('user_activity_status', status);
     const uid = App.me()?.id;
     if(uid){ sb.from('profiles').update({ activity_status: status }).eq('id', uid).then(); }
-    completeQuest('updateStatus');
+    incrementQuestProgress('changeStatus');
   }
   async function updateCategoryCounters(){
     try {
@@ -4020,7 +4059,7 @@ html{scroll-behavior:smooth}
   }
     /* TAVERN */
   function viewTavern(params){
-    setTimeout(() => completeQuest('checkTavern'), 100);
+    setTimeout(() => incrementQuestProgress('respondTavern'), 100);
     const me = App.me();
     const cat = params.cat || '';
     const q   = params.q || '';
@@ -4673,6 +4712,7 @@ html{scroll-behavior:smooth}
   function viewProfile(id){
     const u = App.user(id); if (!u) return notFound('Пользователь не найден');
     const me = App.me();
+    if (me && me.id !== id && u.role === 'freelancer') incrementQuestProgress('viewProfiles');
     const own = me && me.id === id;
     const m = App.metrics(id);
     const services = App.state.services.filter(s => s.freelancerId === id);
@@ -5939,7 +5979,8 @@ html{scroll-behavior:smooth}
           if (fileInput) { fileInput.value = ''; delete fileInput.dataset.image; }
           // Добавляем сообщение в DOM напрямую, без полной перерисовки
           if (msg) {
-            completeQuest('sendChat');
+            incrementQuestProgress('sendChat');
+            incrementQuestProgress('writeFirstMsg');
             const body = document.getElementById('chatBody');
             if (body) {
               const isMine = msg.senderId === me.id;
@@ -6329,7 +6370,7 @@ html{scroll-behavior:smooth}
       }, data);
       if (errs){ applyFieldErrors(e.target, errs); return; }
       btn.disabled = true; const oldText = btn.textContent; btn.textContent = 'Публикуем…';
-      try { await App.createTask(data); }
+      try { await App.createTask(data); incrementQuestProgress('createTask'); }
       catch(err){ btn.disabled = false; btn.textContent = oldText; return toast('Ошибка: ' + (err.message||err),'error'); }
       closeModal(); toast('Задание опубликовано','success'); navigate('#exchange'); render();
     });
@@ -6567,6 +6608,7 @@ html{scroll-behavior:smooth}
       if (r?.self){ toast('Нельзя заказать свою услугу','error'); return; }
       if (r?.dup){ toast('Вы уже оформили этот заказ','error'); return; }
       if (r?.err){ toast('Ошибка: ' + r.err,'error'); return; }
+      incrementQuestProgress('makeOrder');
       closeModal(); toast('Заказ оформлен. Открыт чат с фрилансером.','success');
       navigate('#messages?chat=' + r.chatId);
     });
@@ -6841,6 +6883,7 @@ html{scroll-behavior:smooth}
           image_url = publicUrl + '?v=' + Date.now();
         }
         await App.addPortfolio({ title, description, image_url, project_url });
+        incrementQuestProgress('addPortfolio');
         closeModal();
         toast('Работа добавлена в портфолио','success');
         render();
