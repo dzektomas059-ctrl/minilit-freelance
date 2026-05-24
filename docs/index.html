@@ -614,6 +614,10 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
 }
 .balance-widget .amount{font-variant-numeric:tabular-nums}
 .balance-widget .amount .cur{font-weight:500;opacity:.7}
+.connects-widget{display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:8px;background:var(--t-surface-2,#f0f2f5);color:var(--green);font-weight:600;font-size:13px;flex-shrink:0;cursor:default}
+.connects-icon{font-size:14px}
+.connects-count{font-variant-numeric:tabular-nums}
+[data-theme="dark"] .connects-widget{background:var(--t-surface-2,#222);color:var(--green)}
 .balance-dropdown{
   position:absolute;top:46px;right:0;min-width:230px;background:#fff;border:1px solid var(--line);
   border-radius:10px;box-shadow:var(--shadow-md);padding:14px;display:none;z-index:60;
@@ -702,7 +706,105 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
 .msg-status .check{color:#9aa3af}
 .msg-status .check.done{color:var(--green)}
 .msg-status .check.read{color:var(--green-d)}
-/* ---------- DARK THEME ---------- */
+/* ===== LANDING PAGE (viewHome) ===== */
+/* smooth scroll */
+html{scroll-behavior:smooth}
+/* reveal animations */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .8s cubic-bezier(.25,1,.5,1),transform .8s cubic-bezier(.25,1,.5,1);will-change:transform,opacity}
+.reveal.active{opacity:1;transform:translateY(0)}
+.reveal.fade-left{transform:translateX(-50px)}
+.reveal.fade-right{transform:translateX(50px)}
+.reveal.scale-up{transform:scale(.9)}
+.reveal.fade-left.active,.reveal.fade-right.active,.reveal.scale-up.active{transform:translate(0) scale(1)}
+/* parallax bg */
+.parallax-bg{position:absolute;top:0;left:0;width:100%;height:100%;background-image:radial-gradient(circle at 80% 20%,rgba(29,191,115,.15) 0%,transparent 50%);pointer-events:none;transform:translateY(0);will-change:transform}
+/* premium card (glassmorphism) */
+.premium-card{background:rgba(17,17,17,.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.05);border-radius:16px;transition:all .4s ease}
+.premium-card:hover{border-color:var(--green);box-shadow:0 10px 30px rgba(29,191,115,.1);transform:translateY(-5px)}
+/* landing sections */
+.landing{overflow:hidden}
+.landing-section{padding:80px 0;position:relative}
+.landing-hero{min-height:85vh;display:flex;align-items:center;position:relative;overflow:hidden;padding:100px 0 60px}
+.landing-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(29,191,115,.08) 0%,transparent 60%),radial-gradient(ellipse at 70% 20%,rgba(29,191,115,.05) 0%,transparent 50%);pointer-events:none}
+.landing-hero .particles{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.landing-hero .particle{position:absolute;width:4px;height:4px;background:var(--green);border-radius:50%;opacity:.3;animation:floatParticle 8s infinite}
+@keyframes floatParticle{0%,100%{transform:translateY(0) scale(1);opacity:.3}50%{transform:translateY(-40px) scale(1.5);opacity:.6}}
+.landing-hero-content{position:relative;z-index:2;max-width:780px}
+.landing-hero h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;line-height:1.15;margin:0 0 16px;letter-spacing:-.02em}
+.landing-hero p{font-size:clamp(1rem,2vw,1.15rem);opacity:.75;max-width:600px;margin:0 0 32px;line-height:1.6}
+.landing-hero .cta-group{display:flex;gap:14px;flex-wrap:wrap}
+.landing-hero .cta-group .btn-primary{animation:pulseGlow 2s infinite}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 rgba(29,191,115,.4)}50%{box-shadow:0 0 0 12px rgba(29,191,115,0)}}
+/* stats section */
+.landing-stats{padding:60px 0}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.stat-mega{text-align:center;padding:32px 20px}
+.stat-mega .counter-val{font-size:clamp(2rem,4vw,3rem);font-weight:800;color:var(--green);display:block;line-height:1}
+.stat-mega .stat-label{font-size:14px;opacity:.6;margin-top:8px;display:block}
+/* how it works */
+.hiw-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.hiw-card{padding:32px 24px;text-align:center;position:relative}
+.hiw-num{width:44px;height:44px;border-radius:50%;background:var(--green);color:#000;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.hiw-card h3{font-size:16px;margin:0 0 8px}
+.hiw-card p{font-size:13px;opacity:.6;margin:0;line-height:1.5}
+/* tavern demo */
+.tavern-demo{background:linear-gradient(135deg,rgba(29,191,115,.05),transparent);border-radius:24px;padding:48px;margin-top:20px}
+.tavern-demo-inner{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.connects-scale{background:var(--t-surface);border-radius:12px;padding:28px;text-align:center}
+.connects-scale .cs-label{font-size:13px;opacity:.6;margin-bottom:12px;display:block}
+.connects-scale .cs-bar{height:20px;background:var(--t-line);border-radius:10px;overflow:hidden;margin-bottom:8px}
+.connects-scale .cs-fill{height:100%;background:linear-gradient(90deg,var(--green),#5ce6a0);border-radius:10px;transition:width 1.5s cubic-bezier(.25,1,.5,1);width:100%}
+.connects-scale .cs-count{font-weight:700;font-size:24px;color:var(--green)}
+/* category cards grid */
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.cat-card{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;border-radius:16px;background:var(--t-surface);border:1px solid var(--t-line);cursor:pointer;transition:all .35s cubic-bezier(.25,1,.5,1);text-decoration:none;color:inherit;perspective:600px;min-height:140px;text-align:center}
+.cat-card:hover{transform:perspective(600px) rotateX(2deg) rotateY(2deg) scale(1.05);border-color:var(--green);box-shadow:0 15px 40px rgba(29,191,115,.15);background:linear-gradient(135deg,rgba(29,191,115,.08),var(--t-surface))}
+.cat-card .cat-icon{font-size:32px;margin-bottom:12px;display:block}
+.cat-card .cat-name{font-size:14px;font-weight:600}
+/* innovation banner */
+.innovation-banner{background:linear-gradient(135deg,#0a0a0a,#141416);border:1px solid var(--t-line);border-radius:24px;padding:60px 48px;position:relative;overflow:hidden;margin-top:20px}
+.innovation-banner::before{content:'';position:absolute;top:-50%;right:-20%;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(29,191,115,.08),transparent 70%)}
+.innovation-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;position:relative;z-index:1}
+.innovation-item{padding:24px;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04)}
+.innovation-item .ii-icon{font-size:28px;margin-bottom:8px;display:block}
+.innovation-item h4{font-size:15px;margin:0 0 6px}
+.innovation-item p{font-size:13px;opacity:.5;margin:0}
+/* final CTA */
+.final-cta{padding:80px 0;text-align:center;position:relative}
+.final-cta-inner{max-width:560px;margin:0 auto}
+.final-cta h2{font-size:clamp(1.5rem,3vw,2.2rem);margin:0 0 12px}
+.final-cta p{opacity:.6;margin:0 0 28px}
+.final-cta .btn-primary{font-size:16px;padding:16px 40px}
+/* custom notification modal */
+.custom-notif-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding-top:60px;background:rgba(0,0,0,.5);animation:fadeIn .2s}
+.custom-notif{display:flex;align-items:flex-start;gap:14px;background:#1a1a1a;border:1px solid #333;border-radius:14px;padding:20px 24px;max-width:420px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,.6);animation:slideDown .3s}
+.custom-notif.success{border-color:var(--green)}
+.custom-notif.error{border-color:#ef4444}
+.custom-notif .cn-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.custom-notif.success .cn-icon{background:rgba(29,191,115,.15)}
+.custom-notif.error .cn-icon{background:rgba(239,68,68,.15)}
+.custom-notif .cn-body{flex:1;min-width:0}
+.custom-notif .cn-title{font-weight:600;font-size:14px;color:#e8e8e8}
+.custom-notif .cn-text{font-size:13px;color:#999;margin-top:4px;line-height:1.4}
+.custom-notif .cn-close{background:none;border:none;color:#666;font-size:20px;cursor:pointer;padding:0;line-height:1}
+.custom-notif .cn-close:hover{color:#fff}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+/* form field error animation */
+.field-err{font-size:12px;color:#ef4444;margin-top:4px;opacity:0;transform:translateY(-6px);transition:all .25s ease}
+.field-err.show{opacity:1;transform:translateY(0)}
+/* drag & drop overlay */
+.chat-form.drag-over::after{content:'';position:absolute;inset:0;border:2px dashed var(--green);border-radius:12px;background:rgba(29,191,115,.05);pointer-events:none;z-index:5}
+.chat-form{position:relative}
+.chat-form-row{position:relative;z-index:1}
+/* landing dark overrides */
+[data-theme="dark"] .landing-hero h1{color:#f0f0f0}
+[data-theme="dark"] .landing-hero p{color:#aaa}
+[data-theme="dark"] .hiw-card p{color:#888}
+[data-theme="dark"] .stat-mega .stat-label{color:#888}
+[data-theme="dark"] .connects-scale .cs-label{color:#888}
+[data-theme="dark"] .innovation-item p{color:#888}
+/* DARK THEME ---------- */
 [data-theme="dark"]{
   --green:#1DBF73; --green-d:#159b5b; --green-l:#15321f;
   --yellow:#f5b700;
@@ -1495,6 +1597,101 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
     if (buckets && buckets.some(b => b.id === name)) return;
     await sb.storage.createBucket(name, { public: true }).catch(()=>{});
   }
+  /* ===== image compression (client-side canvas) ===== */
+  function compressAndConvertImage(file, maxWidth, maxHeight, quality){
+    maxWidth = maxWidth || 1000; maxHeight = maxHeight || 1000; quality = quality || 0.7;
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width, height = img.height;
+          if (width > height){
+            if (width > maxWidth){ height = Math.round((height * maxWidth) / width); width = maxWidth; }
+          } else {
+            if (height > maxHeight){ width = Math.round((width * maxHeight) / height); height = maxHeight; }
+          }
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  }
+  /* ===== custom notification/modal (instead of toast) ===== */
+  function showCustomNotification(title, body, type){
+    type = type || 'info';
+    const icons = { success:'?', error:'?', info:'?' };
+    const existing = document.querySelector('.custom-notif-overlay');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'custom-notif-overlay';
+    overlay.innerHTML = '<div class="custom-notif ' + type + '"><div class="cn-icon">' + (icons[type]||'?') + '</div><div class="cn-body"><div class="cn-title">' + esc(title) + '</div><div class="cn-text">' + esc(body) + '</div></div><button class="cn-close">&times;</button></div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('.cn-close').onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    setTimeout(() => overlay.remove(), 4000);
+  }
+  /* ===== universal form validator ===== */
+  function validateForm(rules, formData){
+    const errors = {};
+    for (const field of Object.keys(rules)){
+      const val = (formData[field]||'').toString().trim();
+      const rule = rules[field];
+      if (rule.required && !val){ errors[field] = rule.label + ' обязательно'; continue; }
+      if (rule.fieldType === 'email' && val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){
+        errors[field] = 'Некорректный email'; continue;
+      }
+      if (rule.minLen && val.length < rule.minLen){ errors[field] = 'Минимум ' + rule.minLen + ' символов'; continue; }
+      if (rule.fieldType === 'number' || rule.fieldType === 'money'){
+        const num = Number(val);
+        if (val && (isNaN(num) || num < (rule.minVal||0))){ errors[field] = 'Минимальное значение ' + (rule.minVal||0); continue; }
+        if (val && rule.maxVal && num > rule.maxVal){ errors[field] = 'Максимум ' + rule.maxVal; continue; }
+      }
+    }
+    return Object.keys(errors).length ? errors : null;
+  }
+  function applyFieldErrors(formEl, errors){
+    formEl.querySelectorAll('.input, .textarea').forEach(el => { el.classList.remove('error'); const e = el.parentElement.querySelector('.field-err'); if (e) e.remove(); });
+    if (!errors) return;
+    for (const field of Object.keys(errors)){
+      const inp = formEl.querySelector('[name="' + field + '"]');
+      if (!inp) continue;
+      inp.classList.add('error');
+      const existing = inp.parentElement.querySelector('.field-err');
+      if (existing) existing.remove();
+      const errEl = document.createElement('div');
+      errEl.className = 'field-err';
+      errEl.textContent = errors[field];
+      inp.parentElement.appendChild(errEl);
+      setTimeout(() => errEl.classList.add('show'), 10);
+    }
+  }
+  /* ===== connects check helper ===== */
+  async function checkConnects(userId){
+    const { data: profile, error } = await sb.from('profiles').select('connects_remaining').eq('id', userId).single();
+    if (error || !profile) return { ok: false, err: 'Ошибка проверки коннектов' };
+    if (profile.connects_remaining < 1){
+      showCustomNotification('Недостаточно коннектов', 'У вас закончились коннекты. Пополнение происходит ежемесячно.', 'error');
+      return { ok: false, err: 'no_connects' };
+    }
+    return { ok: true, connects: profile.connects_remaining };
+  }
+  async function spendConnect(userId, currentConnects){
+    const newConnects = Math.max(0, (currentConnects||50) - 1);
+    await sb.from('profiles').update({ connects_remaining: newConnects }).eq('id', userId);
+    const me = App.me();
+    if (me && me.id === userId) me.connectsRemaining = newConnects;
+    const widget = document.querySelector('#connectsCount, .connects-count');
+    if (widget) widget.textContent = newConnects;
+    return newConnects;
+  }
   const App = {
     state: {
       users: [], tasks: [], responses: [], services: [], orders: [],
@@ -1772,6 +1969,9 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
       if (this.state.responses.some(r => r.taskId === taskId && r.freelancerId === me.id)) {
         return { dup:true };
       }
+      // Check connects
+      const cc = await checkConnects(me.id);
+      if (!cc.ok) return { err: cc.err };
       const { data: appl, error } = await sb.from('applications').insert([{
         job_id: taskId, freelancer_id: me.id, message,
       }]).select().single();
@@ -1779,6 +1979,8 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
         if (/duplicate|unique/i.test(error.message)) return { dup:true };
         return { err: error.message };
       }
+      // Spend connect
+      await spendConnect(me.id, cc.connects);
       upsertById(this.state.responses, fromApplication(appl));
       const chat = await this.ensureChat(me.id, t.clientId, { taskId });
       await this.sendMessage(chat.id, me.id, `Отклик на «${t.title}»: ${message}`);
@@ -3055,6 +3257,10 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
         </button>
         <div class="notif-dropdown" id="notifDropdown"></div>
       </div>
+      ${me.role === 'freelancer' ? `<div class="connects-widget" title="Коннекты">
+        <span class="connects-icon">⚡</span>
+        <span class="connects-count" id="connectsCount">${me.connectsRemaining ?? 50}</span>
+      </div>` : ''}
       <div class="balance-menu">
         <button class="balance-widget" id="balanceTrigger" type="button" aria-haspopup="menu" aria-expanded="false">
           <span class="coin" aria-hidden="true">₽</span>
@@ -3411,9 +3617,12 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
       };
       const btn = e.target.querySelector('button[type=submit]');
       clearErrors(e.target);
-      if (data.name.length < 2) return setErr(e.target,'name','Минимум 2 символа');
-      if (!/^.+@.+\..+$/.test(data.email)) return setErr(e.target,'email','Некорректный email');
-      if (data.password.length < 6) return setErr(e.target,'password','Минимум 6 символов');
+      const errs = validateForm({
+        name: { required:true, label:'Имя', minLen:2 },
+        email: { required:true, label:'Email', fieldType:'email' },
+        password: { required:true, label:'Пароль', minLen:6 },
+      }, data);
+      if (errs){ applyFieldErrors(e.target, errs); return; }
       const oldText = btn.textContent;
       btn.disabled = true; btn.textContent = 'Создаём…';
       let r;
@@ -3424,16 +3633,12 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
         if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = oldText; }
         return;
       } finally {
-        // Always reset the button (unless modal already closed and node detached)
         if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = oldText; }
       }
       if (!r || !r.ok){
         setErr(e.target, 'email', (r && r.err) || 'Не удалось создать аккаунт.');
         return;
       }
-      // Success — close modal and HARD reload to a fresh, fully-rehydrated session.
-      // This guarantees realtime channels, profile cache and onAuthStateChange races
-      // are all flushed cleanly before the user lands in their cabinet.
       closeModal();
       toast('Аккаунт создан. Добро пожаловать!', 'success');
       try {
@@ -3518,35 +3723,64 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
       services: App.state.services.length,
       orders: App.state.orders.length,
     };
-    return `
-    <div class="container">
-      <section class="hero">
-        <div class="deco"></div><div class="deco2"></div>
-        <h1>Фриланс, в котором всё на своих местах</h1>
-        <p>MiniLIT — биржа заказов и магазин услуг в одном окне. Заказчики получают исполнителей за пару кликов, фрилансеры — стабильный поток заказов и понятные правила.</p>
-        <div class="cta">
-          <a class="btn-primary btn-lg" href="#exchange" data-link>Найти задание</a>
-          <a class="btn-outline btn-lg" href="#services" data-link>Посмотреть услуги</a>
-          ${me ? '' : '<button class="btn-outline btn-lg" id="ctaJoin">Создать аккаунт</button>'}
-        </div>
-      </section>
-      <div class="metric-tiles">
-        <div class="tile"><div class="label">Пользователей</div><div class="value">${stats.users}</div></div>
-        <div class="tile"><div class="label">Активных заданий</div><div class="value">${stats.tasks}</div></div>
-        <div class="tile"><div class="label">Услуг на витрине</div><div class="value">${stats.services}</div></div>
-        <div class="tile"><div class="label">Сделок проведено</div><div class="value">${stats.orders}</div></div>
-      </div>
-      <div class="page-title">
-        <h2 style="margin:0">Свежие задания</h2>
-        <a class="btn-ghost" href="#exchange" data-link>Все задания →</a>
-      </div>
-      <div>${tasks.map(t => taskCard(t, false, !!(me && me.id === t.clientId))).join('') || emptyState('Пока заданий нет')}</div>
-      <div class="page-title" style="margin-top:24px">
-        <h2 style="margin:0">Топ услуг</h2>
-        <a class="btn-ghost" href="#services" data-link>Все услуги →</a>
-      </div>
-      <div class="svc-grid">${services.map(s => serviceCard(s)).join('') || emptyState('Услуги скоро появятся')}</div>
-    </div>`;
+    const CATS = [{ id:'dev',name:'Разработка' },{ id:'design',name:'Дизайн' },{ id:'copy',name:'Копирайтинг' },{ id:'marketing',name:'Маркетинг' },{ id:'video',name:'Видео' },{ id:'audio',name:'Аудио' },{ id:'consulting',name:'Консалтинг' },{ id:'other',name:'Другое' }];
+    const isGuest = !me;
+    const connectsPct = me ? Math.round((me.connectsRemaining??50)/50*100) : 0;
+    const landing = '<div class="landing">'
+      /* === HERO === */
+      + '<section class="landing-section landing-hero">'
+      + '<div class="parallax-bg"></div>'
+      + '<div class="particles">' + Array.from({length:20},(_,i)=>'<div class="particle" style="left:'+(Math.random()*100)+'%;top:'+(Math.random()*100)+'%;animation-delay:'+(Math.random()*8)+'s"></div>').join('') + '</div>'
+      + '<div class="container landing-hero-content">'
+      + '<h1 class="reveal">Фриланс, в котором всё<br><span style="color:var(--green)">на своих местах</span></h1>'
+      + '<p class="reveal">MiniLIT — биржа заказов и магазин услуг в одном окне. Заказчики получают исполнителей за пару кликов, фрилансеры — стабильный поток заказов и понятные правила.</p>'
+      + '<div class="cta-group reveal">'
+      + '<a class="btn-primary btn-lg" href="#exchange" data-link>Найти задание</a>'
+      + '<a class="btn-outline btn-lg" href="#services" data-link>Посмотреть услуги</a>'
+      + (isGuest ? '<a class="btn-outline btn-lg" href="#register" data-link>Создать аккаунт</a>' : '')
+      + '</div></div></section>'
+      /* === STATS === */
+      + '<section class="landing-section landing-stats"><div class="container"><div class="stats-grid">'
+      + '<div class="premium-card stat-mega reveal"><span class="counter-val" data-target="'+stats.users+'">0</span><span class="stat-label">Пользователей</span></div>'
+      + '<div class="premium-card stat-mega reveal"><span class="counter-val" data-target="'+stats.tasks+'">0</span><span class="stat-label">Активных заданий</span></div>'
+      + '<div class="premium-card stat-mega reveal"><span class="counter-val" data-target="'+stats.services+'">0</span><span class="stat-label">Услуг на витрине</span></div>'
+      + '<div class="premium-card stat-mega reveal"><span class="counter-val" data-target="'+stats.orders+'">0</span><span class="stat-label">Сделок проведено</span></div>'
+      + '</div></div></section>'
+      /* === HOW IT WORKS === */
+      + '<section class="landing-section"><div class="container"><h2 class="reveal" style="text-align:center;font-size:28px;margin:0 0 40px">Как это работает</h2>'
+      + '<div class="hiw-grid">'
+      + ['Регистрируешься за 30 секунд','Находишь задание или услугу','Договариваешься в чате','Получаешь оплату'].map((txt,i)=>'<div class="premium-card hiw-card reveal"><div class="hiw-num">'+(i+1)+'</div><h3>'+txt+'</h3><p>Простая система без лишних шагов</p></div>').join('')
+      + '</div></div></section>'
+      /* === TAVERN DEMO === */
+      + '<section class="landing-section"><div class="container"><div class="tavern-demo reveal">'
+      + '<div class="tavern-demo-inner"><div>'
+      + '<h2 style="font-size:24px;margin:0 0 12px">⚡ Таверна проектов</h2>'
+      + '<p style="opacity:.7;line-height:1.6">Продвинутая биржа с коннектами. Каждый фрилансер получает <strong>50 коннектов</strong> в месяц на отклики. Трать их с умом!</p>'
+      + (me && me.role==='freelancer' ? '<a class="btn-primary" href="#tavern" data-link style="margin-top:8px">Перейти в Таверну</a>' : '<a class="btn-outline" href="#register" data-link style="margin-top:8px">Присоединиться</a>')
+      + '</div><div class="connects-scale reveal fade-right">'
+      + '<span class="cs-label">Твои коннекты</span>'
+      + '<div class="cs-bar"><div class="cs-fill" style="width:'+connectsPct+'%"></div></div>'
+      + '<span class="cs-count">'+ (me ? (me.connectsRemaining??50) : 50) +' / 50</span>'
+      + '</div></div></div></div></section>'
+      /* === CATEGORIES === */
+      + '<section class="landing-section"><div class="container"><h2 class="reveal" style="text-align:center;font-size:28px;margin:0 0 40px">Категории</h2>'
+      + '<div class="cat-grid">' + CATS.map(c => '<a class="cat-card reveal" href="#exchange?cat='+c.id+'" data-link><span class="cat-icon">📂</span><span class="cat-name">'+c.name+'</span></a>').join('') + '</div></div></section>'
+      /* === INNOVATION === */
+      + '<section class="landing-section"><div class="container"><div class="innovation-banner reveal">'
+      + '<h2 style="font-size:24px;margin:0 0 32px;text-align:center">Почему MiniLIT?</h2>'
+      + '<div class="innovation-grid">'
+      + [{icon:'🔒',title:'Безопасные сделки',desc:'Встроенная система заказов с защитой'},{icon:'🤖',title:'AI-помощь',desc:'Умные подборки и рекомендации'},{icon:'⚡',title:'Мгновенные чаты',desc:'Общение с исполнителем в реальном времени'}].map(i => '<div class="innovation-item"><span class="ii-icon">'+i.icon+'</span><h4>'+i.title+'</h4><p>'+i.desc+'</p></div>').join('')
+      + '</div></div></div></section>'
+      /* === FINAL CTA === */
+      + '<section class="landing-section final-cta"><div class="container"><div class="final-cta-inner reveal">'
+      + '<h2>Готов начать?</h2>'
+      + '<p>Присоединяйся к сообществу фрилансеров и заказчиков. Первый шаг — регистрация.</p>'
+      + (isGuest ? '<a class="btn-primary" href="#register" data-link>Создать аккаунт →</a>' : '<a class="btn-primary" href="#exchange" data-link>К заданиям →</a>')
+      + '</div></div></section>'
+      + '</div>';
+    const tasksBlock = tasks.length ? '<div class="page-title" style="margin-top:24px"><h2 style="margin:0">Свежие задания</h2><a class="btn-ghost" href="#exchange" data-link>Все задания →</a></div><div>' + tasks.map(t => taskCard(t, false, !!(me && me.id === t.clientId))).join('') + '</div>' : '';
+    const svcBlock = services.length ? '<div class="page-title" style="margin-top:24px"><h2 style="margin:0">Топ услуг</h2><a class="btn-ghost" href="#services" data-link>Все услуги →</a></div><div class="svc-grid">' + services.map(s => serviceCard(s)).join('') + '</div>' : '';
+    return landing + '<div class="container">' + tasksBlock + svcBlock + '</div>';
   }
     /* TAVERN */
   function viewTavern(params){
@@ -5311,6 +5545,51 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
     // delegated handlers per route
     if (route === 'home'){
       const join = $('#ctaJoin'); if (join) join.onclick = () => showRegister();
+      // Landing: reveal animations / IntersectionObserver
+      if (!window._landingObs){
+        window._landingObs = new IntersectionObserver((entries) => {
+          entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('active'); window._landingObs.unobserve(e.target); } });
+        }, { threshold: 0.15 });
+      }
+      document.querySelectorAll('.reveal').forEach(el => window._landingObs.observe(el));
+      // Counter animation
+      document.querySelectorAll('.counter-val').forEach(el => {
+        const target = Number(el.dataset.target);
+        if (target === 0) el.textContent = '0';
+        const obs = new IntersectionObserver(([entry]) => {
+          if (!entry.isIntersecting) return;
+          obs.disconnect();
+          const duration = 1500, steps = 40;
+          const increment = target / steps;
+          let current = 0, step = 0;
+          const timer = setInterval(() => {
+            step++;
+            current = Math.min(target, Math.round(increment * step));
+            el.textContent = current.toLocaleString();
+            if (current >= target) clearInterval(timer);
+          }, duration / steps);
+        }, { threshold: 0.5 });
+        obs.observe(el);
+      });
+      // Parallax
+      window._parallaxHandler = window._parallaxHandler || function(){
+        const bg = document.querySelector('.parallax-bg');
+        if (bg) bg.style.transform = 'translateY(' + (window.scrollY * 0.3) + 'px)';
+      };
+      window.addEventListener('scroll', window._parallaxHandler, { passive: true });
+      // Tilt cards
+      document.querySelectorAll('.cat-card').forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left, y = e.clientY - rect.top;
+          const cx = rect.width / 2, cy = rect.height / 2;
+          const dx = (x - cx) / cx, dy = (y - cy) / cy;
+          card.style.transform = 'perspective(600px) rotateX(' + (-dy * 6) + 'deg) rotateY(' + (dx * 6) + 'deg) scale(1.05)';
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = 'perspective(600px) rotateX(0) rotateY(0) scale(1)';
+        });
+      });
     }
     if (route === 'exchange'){
       $('#btnNewTask')?.addEventListener('click', () => requireAuth() && openTaskForm());
@@ -5422,21 +5701,31 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
         document.getElementById('chatAttachBtn')?.addEventListener('click', () => {
           document.getElementById('chatFileInput')?.click();
         });
-        document.getElementById('chatFileInput')?.addEventListener('change', function(){
+        document.getElementById('chatFileInput')?.addEventListener('change', async function(){
           const file = this.files[0];
           if (!file) return;
-          const reader = new FileReader();
-          reader.onload = function(e){
+          try {
+            let dataUrl;
+            if (file.size > 512000){ // > 500KB — compress
+              dataUrl = await compressAndConvertImage(file);
+            } else {
+              const reader = new FileReader();
+              dataUrl = await new Promise((resolve, reject) => {
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+              });
+            }
             const preview = document.getElementById('chatPreview');
             const img = document.getElementById('chatPreviewImg');
             if (preview && img){
-              img.src = e.target.result;
+              img.src = dataUrl;
               preview.style.display = 'block';
             }
-            // Store image data for sending
-            document.getElementById('chatFileInput').dataset.image = e.target.result;
-          };
-          reader.readAsDataURL(file);
+            document.getElementById('chatFileInput').dataset.image = dataUrl;
+          } catch(e){
+            toast('Ошибка загрузки файла','error');
+          }
         });
         document.getElementById('chatPreviewClear')?.addEventListener('click', () => {
           const preview = document.getElementById('chatPreview');
@@ -5446,6 +5735,46 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
           if (img) img.src = '';
           if (input) { input.value = ''; delete input.dataset.image; }
         });
+        // Drag & Drop for chat
+        const chatFormRow = document.querySelector('.chat-form');
+        if (chatFormRow){
+          let dragCounter = 0;
+          chatFormRow.addEventListener('dragenter', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            dragCounter++;
+            chatFormRow.classList.add('drag-over');
+          });
+          chatFormRow.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
+          chatFormRow.addEventListener('dragleave', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            dragCounter--;
+            if (dragCounter === 0) chatFormRow.classList.remove('drag-over');
+          });
+          chatFormRow.addEventListener('drop', async (e) => {
+            e.preventDefault(); e.stopPropagation();
+            chatFormRow.classList.remove('drag-over');
+            dragCounter = 0;
+            const file = e.dataTransfer.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            try {
+              let dataUrl;
+              if (file.size > 512000){
+                dataUrl = await compressAndConvertImage(file);
+              } else {
+                const reader = new FileReader();
+                dataUrl = await new Promise((resolve, reject) => {
+                  reader.onload = () => resolve(reader.result);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(file);
+                });
+              }
+              const preview = document.getElementById('chatPreview');
+              const img = document.getElementById('chatPreviewImg');
+              if (preview && img){ img.src = dataUrl; preview.style.display = 'block'; }
+              document.getElementById('chatFileInput').dataset.image = dataUrl;
+            } catch(e){ toast('Ошибка загрузки','error'); }
+          });
+        }
       }
       $('#chatBackBtn')?.addEventListener('click', () => { navigate('#messages'); });
       // посетил вкладку — сбрасываем счётчик уведомлений
@@ -5733,9 +6062,12 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
       };
       const btn = e.target.querySelector('button[type=submit]');
       clearErrors(e.target);
-      if (data.title.length < 5) return setErr(e.target,'title','Минимум 5 символов');
-      if (data.description.length < 20) return setErr(e.target,'description','Минимум 20 символов');
-      if (!data.budget || data.budget < 100) return setErr(e.target,'budget','Бюджет от 100 ₽');
+      const errs = validateForm({
+        title: { required:true, label:'Название', minLen:5 },
+        description: { required:true, label:'Описание', minLen:20 },
+        budget: { required:true, label:'Бюджет', fieldType:'money', minVal:100 },
+      }, data);
+      if (errs){ applyFieldErrors(e.target, errs); return; }
       btn.disabled = true; const oldText = btn.textContent; btn.textContent = 'Публикуем…';
       try { await App.createTask(data); }
       catch(err){ btn.disabled = false; btn.textContent = oldText; return toast('Ошибка: ' + (err.message||err),'error'); }
@@ -5786,9 +6118,12 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
       };
       const btn = e.target.querySelector('button[type=submit]');
       clearErrors(e.target);
-      if (data.title.length < 5) return setErr(e.target,'title','Минимум 5 символов');
-      if (data.description.length < 20) return setErr(e.target,'description','Минимум 20 символов');
-      if (!data.price || data.price < 100) return setErr(e.target,'price','Цена от 100 ₽');
+      const errs = validateForm({
+        title: { required:true, label:'Название', minLen:5 },
+        description: { required:true, label:'Описание', minLen:20 },
+        price: { required:true, label:'Цена', fieldType:'money', minVal:100 },
+      }, data);
+      if (errs){ applyFieldErrors(e.target, errs); return; }
       btn.disabled = true; const oldText = btn.textContent; btn.textContent = 'Публикуем…';
       try { await App.createService(data); }
       catch(err){ btn.disabled = false; btn.textContent = oldText; return toast('Ошибка: ' + (err.message||err),'error'); }
@@ -5836,9 +6171,18 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
       form.addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(form);
+        const data = {
+          coverLetter: (fd.get('coverLetter')||'').toString().trim(),
+          price: Number(fd.get('price')||0),
+        };
+        const errs = validateForm({
+          coverLetter: { required:true, label:'Письмо', minLen:10 },
+          price: { required:true, label:'Цена', fieldType:'money', minVal:1 },
+        }, data);
+        if (errs){ applyFieldErrors(form, errs); return; }
         const btn = form.querySelector('[type="submit"]');
         btn.disabled = true; btn.textContent = 'Отправка...';
-        const result = await App.respondTavern(projectId, fd.get('coverLetter'), fd.get('price'));
+        const result = await App.respondTavern(projectId, data.coverLetter, data.price);
         btn.disabled = false; btn.textContent = 'Откликнуться';
         if (result.error){ toast(result.error, 'error'); return; }
         toast('Вы откликнулись на проект','success');
@@ -5879,11 +6223,23 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
       form.addEventListener('submit', async e => {
         e.preventDefault();
         const fd = new FormData(form);
+        const data = {
+          title: (fd.get('title')||'').toString().trim(),
+          description: (fd.get('description')||'').toString().trim(),
+          category: fd.get('category')||'',
+          budget: Number(fd.get('budget')||0),
+        };
+        const errs = validateForm({
+          title: { required:true, label:'Название', minLen:5 },
+          description: { required:true, label:'Описание', minLen:20 },
+          budget: { required:true, label:'Бюджет', fieldType:'money', minVal:1 },
+        }, data);
+        if (errs){ applyFieldErrors(form, errs); return; }
         const btn = form.querySelector('[type="submit"]');
         btn.disabled = true; btn.textContent = 'Публикация...';
         const result = await App.createTavernProject({
-          title: fd.get('title'), description: fd.get('description'),
-          category: fd.get('category'), budget: fd.get('budget'),
+          title: data.title, description: data.description,
+          category: data.category, budget: data.budget,
         });
         btn.disabled = false; btn.textContent = 'Опубликовать';
         if (!result){ toast('Не удалось создать проект','error'); return; }
@@ -5912,12 +6268,13 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
     $('#modalRoot [data-close]').onclick = closeModal;
     $('#respForm').addEventListener('submit', async e => {
       e.preventDefault();
-      const msg = e.target.message.value.trim();
+      const data = { message: e.target.message.value.trim() };
       const btn = e.target.querySelector('button[type=submit]');
       clearErrors(e.target);
-      if (msg.length < 10) return setErr(e.target,'message','Минимум 10 символов');
+      const errs = validateForm({ message: { required:true, label:'Сообщение', minLen:10 } }, data);
+      if (errs){ applyFieldErrors(e.target, errs); return; }
       btn.disabled = true; const oldText = btn.textContent; btn.textContent = 'Отправляем…';
-      const r = await App.respond(taskId, msg);
+      const r = await App.respond(taskId, data.message);
       btn.disabled = false; btn.textContent = oldText;
       if (r?.dup){ setErr(e.target,'message','Вы уже откликались на это задание'); return; }
       if (r?.err){ toast('Ошибка: ' + r.err,'error'); return; }
