@@ -1250,6 +1250,23 @@ html{scroll-behavior:smooth}
 .portfolio-item .p-title{font-weight:600;font-size:15px;margin:0 0 4px}
 .portfolio-item .p-desc{color:var(--gray);font-size:13px;margin:0}
 .portfolio-item .p-actions{display:flex;gap:8px;margin-top:8px}
+/* dark theme portfolio fix */
+[data-theme="dark"] .portfolio-item,
+[data-theme="dark"] [class*="portfolio-card"]{
+  background-color:#111 !important;border:1px solid #222 !important;color:#fff !important;border-radius:16px;overflow:hidden
+}
+[data-theme="dark"] .portfolio-item img{border-radius:16px 16px 0 0}
+[data-theme="dark"] .portfolio-item .p-info{background-color:#111 !important;border-top:1px solid #222 !important;padding:16px !important}
+[data-theme="dark"] .portfolio-item .p-title,
+[data-theme="dark"] .portfolio-item [class*="title"]{color:#fff !important}
+[data-theme="dark"] .portfolio-item .p-desc,
+[data-theme="dark"] .portfolio-item [class*="desc"]{color:#8c8c8c !important}
+[data-theme="dark"] .portfolio-item .btn-outline-danger,
+[data-theme="dark"] .portfolio-item button[onclick*="delete"],
+[data-theme="dark"] .portfolio-item .delete-portfolio-btn{border-color:rgba(239,68,68,.4) !important;color:#ef4444 !important;background:transparent !important;transition:all .3s ease}
+[data-theme="dark"] .portfolio-item .btn-outline-danger:hover,
+[data-theme="dark"] .portfolio-item button[onclick*="delete"]:hover,
+[data-theme="dark"] .portfolio-item .delete-portfolio-btn:hover{background:#ef4444 !important;color:#fff !important;border-color:#ef4444 !important;box-shadow:0 0 12px rgba(239,68,68,.3)}
 .portfolio-empty{text-align:center;padding:40px 20px;color:var(--gray)}
 /* ===== Таверна ===== */
 .tavern-layout{display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start}
