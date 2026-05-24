@@ -136,10 +136,24 @@ img{max-width:100%;display:block}
 .dropdown a:hover,.dropdown button:hover{background:#f4f5f7;text-decoration:none}
 .dropdown .divider{height:1px;background:var(--line);margin:6px 0}
 /* sub categories */
-.subnav{background:#fff;border-bottom:1px solid var(--line)}
-.subnav-inner{width:1200px;margin:0 auto;height:42px;display:flex;align-items:center;gap:24px;padding:0 16px;font-size:13px}
-.subnav-inner a{color:#1f2937}
-.subnav-inner a:hover{color:var(--green);text-decoration:none}
+/* category bar / guilds (replaces old .subnav) */
+.category-bar-wrapper{background:var(--t-bar,#fff);border-bottom:1px solid var(--t-line,rgba(0,0,0,.08));padding:12px 0;width:100%;overflow:hidden}
+.category-bar-scroll{display:flex;justify-content:center;gap:24px;overflow-x:auto;white-space:nowrap;padding:0 20px;scrollbar-width:none}
+.category-bar-scroll::-webkit-scrollbar{display:none}
+.category-link{color:var(--t-bar-text,#555);text-decoration:none;font-size:.95rem;font-weight:500;transition:all .3s cubic-bezier(.25,1,.5,1);position:relative;padding:4px 0}
+.category-link:hover,.category-link.active{color:var(--green,#1DBF73)!important}
+.category-link::after{content:'';position:absolute;bottom:0;left:0;width:0;height:2px;background:#1DBF73;transition:width .3s ease}
+.category-link:hover::after,.category-link.active::after{width:100%}
+.category-link.dota-category-accent{color:var(--t-bar-text,#555);font-weight:600;display:inline-flex;align-items:center;gap:6px;background:rgba(224,68,68,.05);padding:4px 12px;border-radius:6px;border:1px solid rgba(224,68,68,.15);transition:all .3s ease}
+.category-link.dota-category-accent:hover{color:#ff4a4a!important;border-color:rgba(255,74,74,.4);background:rgba(255,74,74,.1);box-shadow:0 0 10px rgba(255,74,74,.15)}
+.category-link.dota-category-accent::after{display:none}
+.dota-dot{width:6px;height:6px;background:#ff4a4a;border-radius:50%;display:inline-block;box-shadow:0 0 8px #ff4a4a;animation:dotaPulse 2s infinite}
+@keyframes dotaPulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.3);opacity:1}}
+@media(max-width:992px){.category-bar-scroll{justify-content:flex-start;gap:16px}}
+[data-theme="dark"] .category-bar-wrapper{background:#111;border-bottom-color:rgba(255,255,255,.03)}
+[data-theme="dark"] .category-link{color:#8c8c8c}
+[data-theme="dark"] .category-link:hover,[data-theme="dark"] .category-link.active{color:#fff!important}
+[data-theme="dark"] .category-link.dota-category-accent{color:#e2e8f0}
 /* ---------- layout ---------- */
 .container{width:1200px;margin:0 auto;padding:24px 16px}
 .page-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px}
@@ -375,7 +389,7 @@ footer{background:#fff;border-top:1px solid var(--line);margin-top:32px}
    =========================================================== */
 body.is-offer{min-width:0;background:#f4f6fa}
 body.is-offer .topbar-inner{width:auto;max-width:1100px;padding:0 20px}
-body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap:wrap}
+body.is-offer .category-bar-scroll{width:auto;max-width:1100px;padding:0 20px;flex-wrap:wrap}
 .offer-shell{
   width:100%;max-width:880px;margin:0 auto;padding:24px 16px 80px;
   display:flex;flex-direction:column;gap:18px;
@@ -509,7 +523,7 @@ body.is-offer .subnav-inner{width:auto;max-width:1100px;padding:0 20px;flex-wrap
   body.is-offer .topbar-inner{height:auto;min-height:60px;flex-wrap:wrap;padding:10px 12px;gap:10px}
   body.is-offer .topbar-inner .search{order:3;flex-basis:100%;max-width:100%}
   body.is-offer .nav{display:none}
-  body.is-offer .subnav{display:none}
+  body.is-offer .category-bar-wrapper{display:none}
   .offer-shell{padding:16px 12px 80px}
   .offer-card{padding:18px 16px;border-radius:12px}
   .offer-form-card{padding:20px 16px}
@@ -859,8 +873,7 @@ html{scroll-behavior:smooth}
 [data-theme="dark"] .nav a:hover, [data-theme="dark"] .nav a.active{color:var(--green)}
 [data-theme="dark"] .search input{background:var(--t-search);border-color:var(--t-line);color:var(--t-text)}
 [data-theme="dark"] .search input::placeholder{color:var(--t-muted)}
-[data-theme="dark"] .subnav{background:var(--t-bar);border-bottom-color:var(--t-line)}
-[data-theme="dark"] .subnav-inner a{color:var(--t-bar-text)}
+[data-theme="dark"] .category-bar-wrapper{background:var(--t-bar);border-bottom-color:var(--t-line)}
 [data-theme="dark"] .icon-btn{color:var(--t-bar-text)}
 [data-theme="dark"] .user-trigger{color:var(--t-text)}
 [data-theme="dark"] .dropdown{background:var(--t-surface);border-color:var(--t-line);box-shadow:var(--t-dd-shadow)}
@@ -1057,7 +1070,7 @@ html{scroll-behavior:smooth}
   /* — Layout containers — */
   .container,
   .topbar-inner,
-  .subnav-inner,
+  .category-bar-scroll,
   .foot,
   .foot-bottom{
     width:100% !important;max-width:100% !important;
@@ -1085,9 +1098,9 @@ html{scroll-behavior:smooth}
      The avatar is wrapped in <span class="avi-wrap"> so we keep that visible. */
   .user-trigger > span:not(.avi-wrap){display:none}
   /* Category bar — horizontal scroll */
-  .subnav-inner{height:auto;min-height:42px;padding:6px 10px;gap:14px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  .subnav-inner::-webkit-scrollbar{display:none}
-  .subnav-inner a{white-space:nowrap;font-size:13px;flex-shrink:0;padding:6px 0}
+  .category-bar-scroll{height:auto;min-height:42px;padding:6px 10px;gap:14px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .category-bar-scroll::-webkit-scrollbar{display:none}
+  .category-bar-scroll a{white-space:nowrap;font-size:13px;flex-shrink:0;padding:6px 0}
   /* — Hero — */
   .hero{padding:22px 18px;border-radius:14px}
   .hero h1{font-size:clamp(20px, 6.5vw, 26px);line-height:1.22;margin-bottom:8px}
@@ -1256,19 +1269,7 @@ html{scroll-behavior:smooth}
 .meta-separator{color:rgba(255,255,255,.1);font-weight:300;pointer-events:none}
 @media(max-width:768px){.profile-meta-details{flex-direction:column;align-items:flex-start;gap:8px}.meta-separator{display:none}}
 /* category bar / guilds */
-.category-bar-wrapper{background:#111;border-bottom:1px solid rgba(255,255,255,.03);padding:12px 0;width:100%;overflow:hidden}
-.category-bar-scroll{display:flex;justify-content:center;gap:24px;overflow-x:auto;white-space:nowrap;padding:0 20px;scrollbar-width:none}
-.category-bar-scroll::-webkit-scrollbar{display:none}
-.category-link{color:#8c8c8c;text-decoration:none;font-size:.95rem;font-weight:500;transition:all .3s cubic-bezier(.25,1,.5,1);position:relative;padding:4px 0}
-.category-link:hover,.category-link.active{color:#fff}
-.category-link::after{content:'';position:absolute;bottom:0;left:0;width:0;height:2px;background:#1DBF73;transition:width .3s ease}
-.category-link:hover::after,.category-link.active::after{width:100%}
-.category-link.dota-category-accent{color:#e2e8f0;font-weight:600;display:inline-flex;align-items:center;gap:6px;background:rgba(224,68,68,.05);padding:4px 12px;border-radius:6px;border:1px solid rgba(224,68,68,.15);transition:all .3s ease}
-.category-link.dota-category-accent:hover{color:#ff4a4a;border-color:rgba(255,74,74,.4);background:rgba(255,74,74,.1);box-shadow:0 0 10px rgba(255,74,74,.15)}
-.category-link.dota-category-accent::after{display:none}
-.dota-dot{width:6px;height:6px;background:#ff4a4a;border-radius:50%;display:inline-block;box-shadow:0 0 8px #ff4a4a;animation:dotaPulse 2s infinite}
-@keyframes dotaPulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.3);opacity:1}}
-@media(max-width:992px){.category-bar-scroll{justify-content:flex-start}}
+
 .profile-actions{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--line);margin-top:0}
 /* portfolio grid */
 .portfolio-section{margin-top:24px}
@@ -1412,15 +1413,18 @@ html{scroll-behavior:smooth}
     <div class="top-actions" id="topActions"><!-- rendered --></div>
   </div>
 </header>
-<div class="subnav">
-  <div class="subnav-inner">
-        <a href="#services?cat=design" data-link>Дизайн</a>
-    <a href="#services?cat=dev" data-link>Разработка и IT</a>
-    <a href="#services?cat=text" data-link>Тексты и переводы</a>
-    <a href="#services?cat=seo" data-link>SEO и трафик</a>
-    <a href="#services?cat=smm" data-link>Соцсети и маркетинг</a>
-    <a href="#services?cat=av" data-link>Аудио, видео, съёмка</a>
-    <a href="#services?cat=biz" data-link>Бизнес и жизнь</a>
+<div class="category-bar-wrapper">
+  <div class="category-bar-scroll">
+    <a href="#services?cat=design" class="category-link" data-link>Дизайн и Арт</a>
+    <a href="#services?cat=dev" class="category-link" data-link>Код и Скрипты</a>
+    <a href="#services?cat=gaming" class="category-link dota-category-accent" data-link>
+      <span class="dota-dot"></span> Гейминг и Dota 2
+    </a>
+    <a href="#services?cat=text" class="category-link" data-link>Тексты и Локализация</a>
+    <a href="#services?cat=traffic" class="category-link" data-link>Продвижение и Трафик</a>
+    <a href="#services?cat=av" class="category-link" data-link>Саунд и Видеомонтаж</a>
+    <a href="#services?cat=ai" class="category-link" data-link>ИИ и Нейросети</a>
+    <a href="#services?cat=boost" class="category-link" data-link>Буст и Услуги</a>
   </div>
 </div>
 <main id="app"></main>
@@ -1754,6 +1758,25 @@ html{scroll-behavior:smooth}
     const widget = document.querySelector('#connectsCount, .connects-count');
     if (widget) widget.textContent = newConnects;
     return newConnects;
+  }
+  /* ===== live category counters ===== */
+  const CATEGORY_MAPPER = {
+    "Разработка":"Код и Скрипты","Разработка и IT":"Код и Скрипты","Дизайн":"Дизайн и Арт","Тексты и переводы":"Тексты и Локализация","SEO и трафик":"Продвижение и Трафик","Соцсети и маркетинг":"Продвижение и Трафик","Аудио, видео, съёмка":"Саунд и Видеомонтаж","Бизнес и жизнь":"Буст и Услуги","Гейминг и Dota 2":"Гейминг и Dota 2"
+  };
+  function getPluralForm(n,a,b,c){ n=Math.abs(n)%100; if(n>=5&&n<=20)return c; n%=10; if(n===1)return a; if(n>=2&&n<=4)return b; return c; }
+  async function updateCategoryCounters(){
+    try {
+      const {data:jobs,error:je}=await sb.from('jobs').select('category').eq('status','open');
+      const {data:services,error:se}=await sb.from('services').select('category');
+      if(je)console.warn('jobs error:',je); if(se)console.warn('services error:',se);
+      const counts={"Код и Скрипты":0,"Дизайн и Арт":0,"Тексты и Локализация":0,"Продвижение и Трафик":0,"Саунд и Видеомонтаж":0,"ИИ и Нейросети":0,"Буст и Услуги":0,"Гейминг и Dota 2":0};
+      if(jobs){ jobs.forEach(i=>{ const m=CATEGORY_MAPPER[i.category]||i.category; if(counts[m]!==undefined)counts[m]++; }); }
+      if(services){ services.forEach(i=>{ const m=CATEGORY_MAPPER[i.category]||i.category; if(counts[m]!==undefined)counts[m]++; }); }
+      document.querySelectorAll('.category-card').forEach(card=>{
+        const cn=card.getAttribute('data-category'), el=card.querySelector('.category-count');
+        if(el&&cn&&counts[cn]!==undefined){ const t=counts[cn]; el.textContent=t+' '+getPluralForm(t,'предложение','предложения','предложений'); }
+      });
+    } catch(e){ console.error('category counters error:',e); }
   }
   const App = {
     state: {
@@ -3835,9 +3858,9 @@ html{scroll-behavior:smooth}
         {svg:'<path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"/>', name:'ИИ и Нейросети', count:'6 проектов'},
         {svg:'<path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>', name:'Буст и Услуги', count:'4 активных задачи'},
         {svg:'<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>', name:'Гейминг и Dota 2', count:'Посмотреть все'},
-      ].map(c => '<a class="category-card premium-card reveal" href="#exchange?cat='+({
+      ].map(c => '<a class="category-card premium-card reveal" data-category="'+c.name+'" href="#exchange?cat='+({
         'Код и Скрипты':'dev','Дизайн и Арт':'design','Тексты и Локализация':'text','Продвижение и Трафик':'traffic','Саунд и Видеомонтаж':'av','ИИ и Нейросети':'ai','Буст и Услуги':'boost','Гейминг и Dota 2':'gaming'
-      }[c.name]||'')+'" data-link><div class="category-icon-wrapper"><svg class="category-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">'+c.svg+'</svg></div><h3 class="category-name">'+c.name+'</h3><span class="category-count">'+c.count+'</span></a>').join('') + '</div></section>'
+      }[c.name]||'')+'" data-link><div class="category-icon-wrapper"><svg class="category-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">'+c.svg+'</svg></div><h3 class="category-name">'+c.name+'</h3><span class="category-count">Загрузка...</span></a>').join('') + '</div></section>'
       /* === BENEFITS === */
       + '<section class="benefits-section reveal"><h2 class="section-title">Почему именно MiniLIT?</h2><p class="section-subtitle">Создаем честную экосистему для фриланса будущего</p><div class="benefits-grid">'
       + '<div class="benefit-card premium-card"><div class="benefit-icon-box shield-glow"><svg class="benefit-svg" viewBox="0 0 24 24" fill="none" stroke="#1DBF73" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg></div><h3 class="benefit-title">Безопасные сделки</h3><p class="benefit-desc">Встроенная система депонирования средств. Деньги переводятся исполнителю только после полного утверждения вами выполненной работы.</p></div>'
@@ -6754,7 +6777,7 @@ html{scroll-behavior:smooth}
   function clearUnreadIfMessages(){ if (parseHash().route === 'messages') clearUnread(); }
   // первый рендер — лёгкий скелетон, потом лоадим данные
   document.getElementById('app').innerHTML = '<div class="container" style="padding:60px 0;text-align:center;color:#9aa3af"><div style="display:inline-block;width:40px;height:40px;border:3px solid #e6e9ee;border-top-color:#1DBF73;border-radius:50%;animation:spin 1s linear infinite"></div><div style="margin-top:14px">Загружаем MiniLIT…</div></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style>';
-  App.init().then(() => { renderTopActions(); render(); applyBottomNav(); }).catch(err => {
+  App.init().then(() => { renderTopActions(); render(); applyBottomNav(); setTimeout(updateCategoryCounters, 500); }).catch(err => {
     console.error(err);
     document.getElementById('app').innerHTML = '<div class="container" style="padding:60px 0;text-align:center;color:#ef4444">Ошибка загрузки: ' + esc(err.message||String(err)) + '</div>';
   });
