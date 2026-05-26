@@ -2258,6 +2258,7 @@ async createTask({ title, description, category, budget }){
     async respond(taskId, message){
       const me = this.me(); const t = this.task(taskId);
       if (!me || !t) return null;
+      if (t.clientId === me.id) return { err: 'Вы не можете откликнуться на своё задание' };
       if (this.state.responses.some(r => r.taskId === taskId && r.freelancerId === me.id)) {
         return { dup:true };
       }
@@ -6723,6 +6724,8 @@ function emptyState(text, cta=''){
   }
   function openRespondForm(taskId){
     const t = App.task(taskId); if (!t) return;
+    const me = App.me();
+    if (me && t.clientId === me.id){ toast('Вы не можете откликнуться на своё задание','error'); return; }
     openModal(`
       <button class="close" data-close>&times;</button>
       <h2>Откликнуться на задание</h2>
