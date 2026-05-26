@@ -2714,14 +2714,16 @@ async sendMessage(chatId, senderId, text, imageUrl){
       updateNotificationBadge();
     },
     async markAllNotificationsRead(){
-      const me = this.me(); if (!me) return;
+      const me = this.me(); if (!me) return true;
       const ids = this.state.notifications.filter(n => n.userId === me.id && !n.read).map(n => n.id);
-      if (!ids.length) return;
-      await sb.from('notifications').update({ is_read: true }).in('id', ids);
+      if (!ids.length) return true;
+      const { error } = await sb.from('notifications').update({ is_read: true }).in('id', ids);
+      if (error) return false;
       for (const n of this.state.notifications){ if (ids.includes(n.id)) n.read = true; }
       this.state.notifUnread = 0;
       updateNotificationBadge();
       scheduleRender();
+      return true;
     },
     /* ===== message status (delivery / read) ===== */
     async markMessageDelivered(messageId){
@@ -3323,6 +3325,30 @@ async sendMessage(chatId, senderId, text, imageUrl){
     set(document.getElementById('msgBadge'));
     set(document.getElementById('bnMsgBadge'));
   }
+  let _markAllReadTimer = null;
+  let _notifReadSnapshot = null;
+  function autoMarkNotificationsRead(){
+    const me = App.me(); if (!me) return;
+    if (App.state.notifUnread === 0) return;
+    if (_markAllReadTimer) clearTimeout(_markAllReadTimer);
+    _notifReadSnapshot = { unread: App.state.notifUnread, reads: App.state.notifications.map(n => n.read) };
+    App.state.notifUnread = 0;
+    for (const n of App.state.notifications) n.read = true;
+    updateNotificationBadge();
+    renderNotificationDropdown();
+    _markAllReadTimer = setTimeout(async () => {
+      _markAllReadTimer = null;
+      const ok = await App.markAllNotificationsRead();
+      if (!ok){
+        App.state.notifUnread = _notifReadSnapshot.unread;
+        App.state.notifications.forEach((n, i) => n.read = _notifReadSnapshot.reads[i]);
+        _notifReadSnapshot = null;
+        updateNotificationBadge();
+        renderNotificationDropdown();
+        toast('Не удалось отметить уведомления как прочитанные','error');
+      }
+    }, 300);
+  }
   function updateNotificationBadge(){
     const n = Number(App.state.notifUnread||0);
     const badge = document.getElementById('notifBadge');
@@ -3653,7 +3679,7 @@ app.innerHTML = html;
         e.stopPropagation();
         const open = nDropdown.classList.toggle('open');
         nToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        if (open) renderNotificationDropdown();
+        if (open){ renderNotificationDropdown(); autoMarkNotificationsRead(); }
         const closeNotif = () => {
           nDropdown.classList.remove('open');
           nToggle.setAttribute('aria-expanded','false');
