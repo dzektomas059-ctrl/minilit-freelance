@@ -562,3 +562,185 @@ BEGIN
     ALTER TABLE profiles ADD COLUMN connects_remaining int not null default 50;
   END IF;
 END $$;
+
+-- ============================================================
+-- 24. Эскроу-система (Safe Deal)
+-- ============================================================
+
+-- Добавляем escrow_amount в orders
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'orders' AND column_name = 'escrow_amount'
+  ) THEN
+    ALTER TABLE orders ADD COLUMN escrow_amount int default 0;
+  END IF;
+END $$;
+
+-- Добавляем dispute_reason в orders
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'orders' AND column_name = 'dispute_reason'
+  ) THEN
+    ALTER TABLE orders ADD COLUMN dispute_reason text;
+  END IF;
+END $$;
+
+-- Обновляем статус orders — добавляем 'disputed'
+-- (существующий check constraint нужно пересоздать)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_class t ON c.conrelid = t.oid
+    WHERE t.relname = 'orders' AND c.conname = 'orders_status_check'
+  ) THEN
+    ALTER TABLE orders DROP CONSTRAINT orders_status_check;
+  END IF;
+END $$;
+ALTER TABLE orders ADD CONSTRAINT orders_status_check
+  CHECK (status IN ('pending_payment','paid','in_progress','waiting_for_approval','completed','cancelled','disputed'));
+
+-- Обновляем триггер check_order_transition для эскроу
+CREATE OR REPLACE FUNCTION public.check_order_transition() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+declare
+  allowed text[];
+  who text;
+begin
+  if old.status = new.status then return new; end if;
+
+  allowed := case old.status
+    when 'pending_payment'    then array['paid','cancelled']
+    when 'paid'               then array['in_progress','cancelled','disputed']
+    when 'in_progress'        then array['waiting_for_approval','cancelled','disputed']
+    when 'waiting_for_approval' then array['completed','in_progress','cancelled','disputed']
+    when 'disputed'           then array['completed','cancelled']
+    when 'completed'          then array[]::text[]
+    when 'cancelled'          then array[]::text[]
+    else array[]::text[]
+  end;
+
+  if not (new.status = any(allowed)) then
+    raise exception 'Invalid order status transition: % -> %', old.status, new.status;
+  end if;
+
+  who := case
+    when old.status = 'pending_payment' and new.status = 'paid' then 'client'
+    when old.status = 'paid' and new.status = 'in_progress' then 'freelancer'
+    when old.status = 'in_progress' and new.status = 'waiting_for_approval' then 'freelancer'
+    when old.status = 'waiting_for_approval' and new.status = 'completed' then 'client'
+    when old.status = 'waiting_for_approval' and new.status = 'in_progress' then 'client'
+    when old.status = 'in_progress' and new.status = 'disputed' then 'both'
+    when old.status = 'waiting_for_approval' and new.status = 'disputed' then 'both'
+    when old.status = 'paid' and new.status = 'disputed' then 'both'
+    when old.status = 'disputed' and new.status = 'completed' then 'admin'
+    when old.status = 'disputed' and new.status = 'cancelled' then 'admin'
+    else 'any'
+  end;
+
+  if who <> 'any' and who <> 'admin' then
+    if who = 'both' then
+      -- both client and freelancer can dispute
+      if new.status = 'disputed' then
+        if auth.uid() is distinct from old.client_id and auth.uid() is distinct from old.freelancer_id then
+          raise exception 'Only order participants can dispute';
+        end if;
+      end if;
+    else
+      if auth.uid() is distinct from (case who when 'client' then old.client_id else old.freelancer_id end) then
+        -- allow admin override
+        if not public.is_admin() then
+          raise exception 'Only % can perform this transition', who;
+        end if;
+      end if;
+    end if;
+  end if;
+
+  -- prevent freelancer from changing price, client_id, freelancer_id
+  if new.price is distinct from old.price
+     or new.freelancer_id is distinct from old.freelancer_id
+     or new.client_id is distinct from old.client_id
+  then
+    raise exception 'Cannot change order price or participants';
+  end if;
+
+  return new;
+end;
+$$;
+
+-- RPC: эскроу-оплата — списать с баланса заказчика, записать escrow_amount
+CREATE OR REPLACE FUNCTION public.escrow_pay(p_order_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+declare
+  v_order record;
+  v_client_balance int;
+begin
+  select * into v_order from orders where id = p_order_id;
+  if not found then raise exception 'Order not found'; end if;
+  if v_order.status != 'pending_payment' then raise exception 'Order is not pending_payment'; end if;
+
+  select balance into v_client_balance from profiles where id = v_order.client_id;
+  if v_client_balance < v_order.price then raise exception 'Insufficient balance'; end if;
+
+  update profiles set balance = balance - v_order.price where id = v_order.client_id and balance >= v_order.price;
+  if not found then raise exception 'Insufficient balance (race condition)'; end if;
+
+  update orders set
+    status = 'paid',
+    escrow_amount = v_order.price,
+    payment_proof = 'escrow',
+    updated_at = now()
+  where id = p_order_id;
+
+  return true;
+end;
+$$;
+
+-- RPC: эскроу-возврат — вернуть заказчику при отмене
+CREATE OR REPLACE FUNCTION public.escrow_refund(p_order_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+declare
+  v_order record;
+begin
+  select * into v_order from orders where id = p_order_id;
+  if not found then raise exception 'Order not found'; end if;
+  if v_order.escrow_amount is null or v_order.escrow_amount = 0 then
+    raise exception 'No escrow to refund';
+  end if;
+
+  update profiles set balance = balance + v_order.escrow_amount where id = v_order.client_id;
+  update orders set
+    escrow_amount = 0,
+    updated_at = now()
+  where id = p_order_id;
+  return true;
+end;
+$$;
+
+-- RPC: зачислить фрилансеру при завершении заказа
+CREATE OR REPLACE FUNCTION public.credit_freelancer(p_user_id uuid, p_amount int)
+RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+begin
+  update profiles set balance = balance + p_amount
+  where id = p_user_id;
+  return found;
+end;
+$$;
+
+-- Добавляем orders в realtime
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'orders'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE orders;
+  END IF;
+END $$;
