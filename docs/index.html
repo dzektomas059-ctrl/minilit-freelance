@@ -2446,7 +2446,7 @@ async sendMessage(chatId, senderId, text, imageUrl){
       const t = (text||'').trim();
       if (!t && !imageUrl) return null;
       if (t.length > 5000) return null;
-      if (!rateLimit('msg:'+senderId, 30, 60000)) return null;
+      if (!rateLimit('msg:'+senderId, 2, 1000)) return null;
       const payload = { chat_id: chatId, sender_id: senderId };
       if (t) payload.text = t;
       if (imageUrl) payload.image_url = imageUrl;
@@ -6091,6 +6091,7 @@ function viewAdminComplaints(){
           const msg = await App.sendMessage(chatId, me.id, text, imageData || null);
           form.text.disabled = false;
           form.sendBtn.disabled = false;
+          if (!msg) { toast('Слишком часто. Подожди секунду.','error'); return; }
           form.reset();
           form.text.focus();
           // Clear preview
