@@ -1694,7 +1694,7 @@ const fromOrder = o => o && ({
   });
   const fromNotification = n => n && ({
     id:n.id, userId:n.user_id, type:n.type||'system', title:n.title||'',
-    body:n.body||'', data:n.data||null, link:n.link||'',
+    body:n.body||'', data:(()=>{try{return typeof n.data==='string'?JSON.parse(n.data):n.data}catch{return n.data}})()||null, link:n.link||'',
     read: !!n.is_read,
     createdAt: n.created_at ? Date.parse(n.created_at) : Date.now(),
   });
@@ -2681,7 +2681,7 @@ async sendMessage(chatId, senderId, text, imageUrl){
       try {
         const { error } = await sb.from('notifications').insert([{
           user_id: userId, type, title, body,
-          data: data ? JSON.stringify(data) : null,
+          data: data || null,
           link: link || null,
         }]);
         if (error) console.warn('notify err:', error.message);
