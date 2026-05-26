@@ -70,10 +70,12 @@ create table orders (
   service_id uuid references services(id) on delete set null,
   client_id uuid references profiles(id) on delete cascade,
   freelancer_id uuid references profiles(id) on delete cascade,
-  status text default 'pending_payment' check (status in ('pending_payment','paid','in_progress','waiting_for_approval','completed','cancelled')),
+  status text default 'pending_payment' check (status in ('pending_payment','paid','in_progress','waiting_for_approval','completed','cancelled','disputed')),
   price int,
   title text,
   payment_proof text,
+  escrow_amount int default 0,
+  dispute_reason text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -322,6 +324,59 @@ begin
 end;
 $$;
 
+-- Escrow: pay from client balance to escrow
+create or replace function public.escrow_pay(p_order_id uuid)
+returns boolean
+language plpgsql security definer
+as $$
+declare
+  v_order record;
+  v_client_balance int;
+begin
+  select * into v_order from orders where id = p_order_id;
+  if not found then raise exception 'Order not found'; end if;
+  if v_order.status != 'pending_payment' then raise exception 'Order is not pending_payment'; end if;
+
+  select balance into v_client_balance from profiles where id = v_order.client_id;
+  if v_client_balance < v_order.price then raise exception 'Insufficient balance'; end if;
+
+  update profiles set balance = balance - v_order.price where id = v_order.client_id and balance >= v_order.price;
+  if not found then raise exception 'Insufficient balance (race condition)'; end if;
+
+  update orders set
+    status = 'paid',
+    escrow_amount = v_order.price,
+    payment_proof = 'escrow',
+    updated_at = now()
+  where id = p_order_id;
+
+  return true;
+end;
+$$;
+
+-- Escrow: refund to client on cancellation
+create or replace function public.escrow_refund(p_order_id uuid)
+returns boolean
+language plpgsql security definer
+as $$
+declare
+  v_order record;
+begin
+  select * into v_order from orders where id = p_order_id;
+  if not found then raise exception 'Order not found'; end if;
+  if v_order.escrow_amount is null or v_order.escrow_amount = 0 then
+    raise exception 'No escrow to refund';
+  end if;
+
+  update profiles set balance = balance + v_order.escrow_amount where id = v_order.client_id;
+  update orders set
+    escrow_amount = 0,
+    updated_at = now()
+  where id = p_order_id;
+  return true;
+end;
+$$;
+
 -- Order state machine enforcer (server-side)
 create or replace function public.check_order_transition() returns trigger
 language plpgsql security definer as $$
@@ -333,9 +388,10 @@ begin
 
   allowed := case old.status
     when 'pending_payment'    then array['paid','cancelled']
-    when 'paid'               then array['in_progress','cancelled']
-    when 'in_progress'        then array['waiting_for_approval','cancelled']
-    when 'waiting_for_approval' then array['completed','in_progress','cancelled']
+    when 'paid'               then array['in_progress','cancelled','disputed']
+    when 'in_progress'        then array['waiting_for_approval','cancelled','disputed']
+    when 'waiting_for_approval' then array['completed','in_progress','cancelled','disputed']
+    when 'disputed'           then array['completed','cancelled']
     when 'completed'          then array[]::text[]
     when 'cancelled'          then array[]::text[]
     else array[]::text[]
@@ -351,11 +407,24 @@ begin
     when old.status = 'in_progress' and new.status = 'waiting_for_approval' then 'freelancer'
     when old.status = 'waiting_for_approval' and new.status = 'completed' then 'client'
     when old.status = 'waiting_for_approval' and new.status = 'in_progress' then 'client'
+    when old.status in ('paid','in_progress','waiting_for_approval') and new.status = 'disputed' then 'both'
+    when old.status = 'disputed' and new.status in ('completed','cancelled') then 'admin'
     else 'any'
   end;
 
-  if who <> 'any' and who <> (select role from profiles where id = auth.uid()) then
-    raise exception 'Only % can perform this transition', who;
+  if who = 'client' and auth.uid() is distinct from old.client_id and not public.is_admin() then
+    raise exception 'Only client can perform this transition';
+  end if;
+  if who = 'freelancer' and auth.uid() is distinct from old.freelancer_id and not public.is_admin() then
+    raise exception 'Only freelancer can perform this transition';
+  end if;
+  if who = 'admin' and not public.is_admin() then
+    raise exception 'Only admin can perform this transition';
+  end if;
+  if who = 'both' and new.status = 'disputed' then
+    if auth.uid() is distinct from old.client_id and auth.uid() is distinct from old.freelancer_id then
+      raise exception 'Only order participants can dispute';
+    end if;
   end if;
 
   -- prevent freelancer from changing price, client_id, freelancer_id
@@ -377,4 +446,10 @@ create trigger trg_order_state
 
 -- prevent duplicate active orders
 create unique index if not exists orders_active_unique on orders (service_id, client_id)
-  where status in ('pending_payment', 'paid');
+  where status in ('pending_payment', 'paid', 'in_progress');
+
+-- admin helper function
+create or replace function public.is_admin() returns boolean
+language sql stable security definer as $$
+  select exists (select 1 from profiles where id = auth.uid() and is_admin = true);
+$$;

@@ -56,10 +56,10 @@ create policy "members read application" on applications for select
 create policy "client update application" on applications for update
   using (auth.uid() in (select client_id from jobs where id = job_id));
 
--- orders: client creates; both parties read & update status
+-- orders: client creates; both parties read & update status; admin can resolve disputes
 create policy "own insert order" on orders for insert with check (auth.uid() = client_id);
-create policy "members read order"  on orders for select using (auth.uid() in (client_id, freelancer_id));
-create policy "members update order" on orders for update using (auth.uid() in (client_id, freelancer_id));
+create policy "members read order"  on orders for select using (auth.uid() in (client_id, freelancer_id) or public.is_admin());
+create policy "members update order" on orders for update using (auth.uid() in (client_id, freelancer_id) or public.is_admin());
 
 -- chats: members create/read
 create policy "members insert chat" on chats for insert with check (auth.uid() in (client_id, freelancer_id));

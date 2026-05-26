@@ -353,8 +353,19 @@ img{max-width:100%;display:block}
 .toast.error{background:#b91c1c}
 @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 /* skeleton */
-.skel{background:linear-gradient(90deg,#eef0f3,#f7f8fa,#eef0f3);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:4px}
+.skel{background:linear-gradient(90deg,#eef0f3,#f7f8fa,#eef0f3);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:4px;min-height:16px;min-width:60px}
+.skel-block{height:18px;margin:6px 0;border-radius:4px}
+.skel-title{height:24px;width:60%;margin:8px 0;border-radius:6px}
+.skel-circle{width:48px;height:48px;border-radius:50%;min-width:48px;min-height:48px}
+.skel-card{border-radius:12px;padding:16px;border:1px solid var(--line);background:var(--bg,#fff)}
+.skel-card .skel-line{height:14px;margin:8px 0;border-radius:4px}
+.skel-card .skel-line:last-child{width:40%}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* page transitions */
+#app{animation:pageFadeIn .25s ease}
+@keyframes pageFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.page-enter{animation:pageSlideIn .22s ease}
+@keyframes pageSlideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
 /* footer */
 footer{background:#fff;border-top:1px solid var(--line);margin-top:32px}
 .foot{width:1200px;margin:0 auto;padding:28px 16px 16px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;gap:24px}
@@ -993,7 +1004,7 @@ html{scroll-behavior:smooth}
 /* misc */
 [data-theme="dark"] hr,[data-theme="dark"] .divider{border-color:#2a2a2a;background:#2a2a2a}
 [data-theme="dark"] .star{color:#f5b700}
-[data-theme="dark"] .skeleton{background:linear-gradient(90deg,#1c1c1c 0%,#252525 50%,#1c1c1c 100%)}
+[data-theme="dark"] .skeleton,[data-theme="dark"] .skel{background:linear-gradient(90deg,#1c1c1c 0%,#252525 50%,#1c1c1c 100%);background-size:200% 100%;animation:shimmer 1.2s infinite}
 /* info pages dark */
 [data-theme="dark"] .info-back{background:#1c1c1c;border-color:#2a2a2a;color:#ccc}
 [data-theme="dark"] .info-back:hover{background:#15321f;border-color:var(--green);color:var(--green)}
@@ -1571,8 +1582,19 @@ html{scroll-behavior:smooth}
   const $$ = (q, r=document) => Array.from(r.querySelectorAll(q));
   const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
   const now = () => Date.now();
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtMoney = n => (Number(n)||0).toLocaleString('ru-RU') + ' ₽';
+  const safeUrl = u => { try { const url = new URL(u); if (!['http:','https:'].includes(url.protocol)) return ''; return u; } catch(e){ return ''; } };
+  // Simple client-side rate limiter: max N actions per window (ms)
+  const _rateMap = {};
+  function rateLimit(key, max=5, windowMs=60000){
+    const now = Date.now();
+    if (!_rateMap[key]) _rateMap[key] = [];
+    _rateMap[key] = _rateMap[key].filter(t => now - t < windowMs);
+    if (_rateMap[key].length >= max) return false;
+    _rateMap[key].push(now);
+    return true;
+  }
   const fmtDate = ts => {
     const d = new Date(ts), today = new Date();
     const sameDay = d.toDateString() === today.toDateString();
@@ -1630,10 +1652,12 @@ html{scroll-behavior:smooth}
     message:a.message||'', status:a.status||'pending',
     createdAt: a.created_at ? Date.parse(a.created_at) : 0,
   });
-  const fromOrder = o => o && ({
+const fromOrder = o => o && ({
     id:o.id, serviceId:o.service_id, clientId:o.client_id, freelancerId:o.freelancer_id,
     status:o.status||'pending_payment', price:Number(o.price||0), title:o.title||'',
     paymentProof:o.payment_proof||'',
+    escrowAmount:Number(o.escrow_amount||0),
+    disputeReason:o.dispute_reason||'',
     createdAt: o.created_at ? Date.parse(o.created_at) : 0,
     updatedAt: o.updated_at ? Date.parse(o.updated_at) : 0,
   });
@@ -2193,8 +2217,9 @@ html{scroll-behavior:smooth}
     order(id){ return this.state.orders.find(o => o.id === id); },
     chat(id){ return this.state.chats.find(c => c.id === id); },
     /* ===== mutations ===== */
-    async createTask({ title, description, category, budget }){
+async createTask({ title, description, category, budget }){
       const me = this.me(); if (!me) throw new Error('Войдите в аккаунт');
+      if (!rateLimit('task:'+me.id, 5, 60000)) throw new Error('Слишком много заданий. Подождите минуту.');
       const { data, error } = await sb.from('jobs').insert([{
         title, description, category, budget: Number(budget)||0, client_id: me.id, status: 'open',
       }]).select().single();
@@ -2248,8 +2273,9 @@ html{scroll-behavior:smooth}
         '#task/' + t.id);
       return { ok:true, response: fromApplication(appl), chatId: chat.id };
     },
-    async createService({ title, description, price, category }){
+async createService({ title, description, price, category }){
       const me = this.me(); if (!me) throw new Error('Войдите в аккаунт');
+      if (!rateLimit('svc:'+me.id, 5, 60000)) throw new Error('Слишком много услуг. Подождите минуту.');
       const { data, error } = await sb.from('services').insert([{
         title, description, price: Number(price)||0, category, freelancer_id: me.id,
       }]).select().single();
@@ -2266,21 +2292,39 @@ html{scroll-behavior:smooth}
       this.state.services = removeById(this.state.services, id);
       return true;
     },
-    async orderService(serviceId, message){
+async orderService(serviceId, message){
       const me = this.me(); const s = this.service(serviceId);
       if (!me) return { err: 'Войдите в аккаунт' };
       if (!s) return { err: 'Услуга не найдена' };
       if (s.freelancerId === me.id) return { self:true };
       if (!s.price || s.price < 1) return { err: 'Некорректная цена услуги' };
-      const existing = this.state.orders.find(o => o.serviceId === serviceId && o.clientId === me.id && (o.status === 'pending_payment' || o.status === 'paid'));
+      const existing = this.state.orders.find(o => o.serviceId === serviceId && o.clientId === me.id && (o.status === 'pending_payment' || o.status === 'paid' || o.status === 'in_progress'));
       if (existing) return { dup:true };
+      // Эскроу: списываем с баланса заказчика сразу при создании заказа
+      if ((me.balance || 0) < s.price) return { err: 'Недостаточно средств на балансе. Пополните баланс на ' + fmtMoney(s.price - (me.balance||0)) + '.' };
       const { data: ord, error } = await sb.from('orders').insert([{
         service_id: s.id, client_id: me.id, freelancer_id: s.freelancerId,
         title: s.title, price: s.price, status: 'pending_payment',
+        escrow_amount: 0,
       }]).select().single();
       if (error) return { err: error.message };
       const order = fromOrder(ord);
       upsertById(this.state.orders, order);
+      // Списываем эскроу через RPC
+      try {
+        const { data: escrowOk, error: escrowErr } = await sb.rpc('escrow_pay', { p_order_id: order.id });
+        if (escrowErr || !escrowOk) {
+          // Если эскроу не прошёл — заказ остаётся в pending_payment, пользователь может оплатить позже
+          console.warn('Escrow pay failed:', escrowErr?.message);
+        } else {
+          // Обновляем локальный баланс заказчика
+          me.balance = (me.balance || 0) - s.price;
+          upsertById(this.state.users, me);
+          // Обновляем заказ в кэше
+          const { data: updatedOrder } = await sb.from('orders').select('*').eq('id', order.id).single();
+          if (updatedOrder) upsertById(this.state.orders, fromOrder(updatedOrder));
+        }
+      } catch(e) { console.warn('Escrow pay exception:', e); }
       this.createNotification(s.freelancerId, 'order',
         'Новый заказ на вашу услугу',
         `«${s.title}» от ${me.name}`, { orderId: order.id },
@@ -2290,55 +2334,73 @@ html{scroll-behavior:smooth}
         `Оформил заказ на услугу «${s.title}».${message ? ' Комментарий: ' + message : ''}`);
       return { ok:true, order, chatId: chat.id };
     },
-    async setOrderStatus(id, status, paymentProof){
+async setOrderStatus(id, status, paymentProof, disputeReason){
       const me = this.me(); if (!me) return false;
       const oldOrder = this.order(id);
       if (!oldOrder) return false;
-      if (oldOrder.clientId !== me.id && oldOrder.freelancerId !== me.id) return false;
-      const validStatuses = ['pending_payment','paid','in_progress','waiting_for_approval','completed','cancelled'];
+      if (oldOrder.clientId !== me.id && oldOrder.freelancerId !== me.id && !this.isAdmin()) return false;
+      const validStatuses = ['pending_payment','paid','in_progress','waiting_for_approval','completed','cancelled','disputed'];
       if (!validStatuses.includes(status)) return false;
       if (oldOrder.status === 'completed' || oldOrder.status === 'cancelled') return false;
       const transitions = {
         pending_payment: ['paid','cancelled'],
-        paid: ['in_progress','cancelled'],
-        in_progress: ['waiting_for_approval','cancelled'],
-        waiting_for_approval: ['completed','in_progress','cancelled'],
+        paid: ['in_progress','cancelled','disputed'],
+        in_progress: ['waiting_for_approval','cancelled','disputed'],
+        waiting_for_approval: ['completed','in_progress','cancelled','disputed'],
+        disputed: ['completed','cancelled'],
         completed: [],
         cancelled: [],
       };
       const allowed = transitions[oldOrder.status] || [];
-      if (!allowed.includes(status)) return false;
+      if (!allowed.includes(status) && !this.isAdmin()) return false;
       const who = {
         'pending_payment-paid': 'client',
         'paid-in_progress': 'freelancer',
         'in_progress-waiting_for_approval': 'freelancer',
         'waiting_for_approval-completed': 'client',
         'waiting_for_approval-in_progress': 'client',
+        'paid-disputed': 'both',
+        'in_progress-disputed': 'both',
+        'waiting_for_approval-disputed': 'both',
+        'disputed-completed': 'admin',
+        'disputed-cancelled': 'admin',
       };
       const role = who[oldOrder.status + '-' + status] || 'both';
-      if (role === 'client' && oldOrder.clientId !== me.id) return false;
-      if (role === 'freelancer' && oldOrder.freelancerId !== me.id) return false;
+      if (role === 'client' && oldOrder.clientId !== me.id && !this.isAdmin()) return false;
+      if (role === 'freelancer' && oldOrder.freelancerId !== me.id && !this.isAdmin()) return false;
       const updateData = { status, updated_at: new Date().toISOString() };
       if (status === 'paid' && paymentProof) updateData.payment_proof = paymentProof;
+      if (status === 'disputed' && disputeReason) updateData.dispute_reason = disputeReason;
       try {
         const { data, error } = await sb.from('orders')
           .update(updateData).eq('id', id).select().single();
         if (error) return false;
         const order = fromOrder(data);
         upsertById(this.state.orders, order);
-        if (status === 'completed'){
+        // Эскроу: при завершении — зачислить фрилансеру из escrow
+        if (status === 'completed' && oldOrder.escrowAmount > 0){
           await sb.rpc('credit_freelancer', {
             p_user_id: oldOrder.freelancerId,
-            p_amount: oldOrder.price || 0,
+            p_amount: oldOrder.escrowAmount,
           });
           const freelancer = this.user(oldOrder.freelancerId);
-          if (freelancer) freelancer.balance = (freelancer.balance||0) + (oldOrder.price||0);
+          if (freelancer) freelancer.balance = (freelancer.balance||0) + oldOrder.escrowAmount;
+          // Обнуляем escrow_amount в заказе
+          await sb.from('orders').update({ escrow_amount: 0 }).eq('id', id);
+        }
+        // Эскроу: при отмене — вернуть заказчику
+        if (status === 'cancelled' && oldOrder.escrowAmount > 0){
+          await sb.rpc('escrow_refund', { p_order_id: id });
+          const client = this.user(oldOrder.clientId);
+          if (client) client.balance = (client.balance||0) + oldOrder.escrowAmount;
+          // Обновляем баланс заказчика локально
+          if (me.id === oldOrder.clientId) me.balance = (me.balance||0) + oldOrder.escrowAmount;
         }
         const otherId = order.clientId === me.id ? order.freelancerId : order.clientId;
         const statusLabels = {
-          pending_payment:'Ожидает оплаты', paid:'Оплачено',
+          pending_payment:'Ожидает оплаты', paid:'Оплачено (эскроу)',
           in_progress:'В работе', waiting_for_approval:'На проверке',
-          completed:'Завершён', cancelled:'Отменён',
+          completed:'Завершён', cancelled:'Отменён', disputed:'Спор',
         };
         this.createNotification(otherId, 'order',
           `Статус заказа изменён: ${statusLabels[status]||status}`,
@@ -2380,9 +2442,11 @@ html{scroll-behavior:smooth}
       upsertById(this.state.chats, chat);
       return chat;
     },
-        async sendMessage(chatId, senderId, text, imageUrl){
+async sendMessage(chatId, senderId, text, imageUrl){
       const t = (text||'').trim();
       if (!t && !imageUrl) return null;
+      if (t.length > 5000) return null;
+      if (!rateLimit('msg:'+senderId, 30, 60000)) return null;
       const payload = { chat_id: chatId, sender_id: senderId };
       if (t) payload.text = t;
       if (imageUrl) payload.image_url = imageUrl;
@@ -3473,7 +3537,8 @@ html{scroll-behavior:smooth}
         case 'admin-jobs': html = viewAdminJobs(); break;
         case 'admin-services': html = viewAdminServices(); break;
         case 'admin-users': html = viewAdminUsers(); break;
-        case 'admin-complaints': html = viewAdminComplaints(); break;
+case 'admin-complaints': html = viewAdminComplaints(); break;
+        case 'admin-disputes': html = viewAdminDisputes(); break;
         case 'admin-withdrawals': html = viewAdminWithdrawals(); break;
         default:
           if (INFO_PAGES[route]){ html = viewInfo(route); }
@@ -3482,7 +3547,11 @@ html{scroll-behavior:smooth}
     } catch(e){
       html = `<div class="container"><div class="card">Ошибка: ${esc(e.message)}</div></div>`;
     }
-    app.innerHTML = html;
+app.innerHTML = html;
+    // Page transition animation
+    app.classList.remove('page-enter');
+    void app.offsetWidth; // force reflow
+    app.classList.add('page-enter');
     bindAfterRender(route, param, params);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -4627,7 +4696,7 @@ html{scroll-behavior:smooth}
                 else if (m.deliveredAt) statusHtml = '<span class="msg-status"><span class="check done">✓✓</span></span>';
                 else statusHtml = '<span class="msg-status"><span class="check">✓</span></span>';
               }
-                            const imgHtml = m.imageUrl ? `<img class="chat-img" src="${esc(m.imageUrl)}" alt="">` : '';
+                            const imgHtml = m.imageUrl ? `<img class="chat-img" src="${esc(safeUrl(m.imageUrl))}" alt="">` : '';
               return `<div class="bubble ${isMine?'out':'in'}">
                 ${imgHtml}${m.text && m.text.startsWith('[VOICE_MSG]:') ? `<div class="voice-message-player"><audio src="${esc(m.text.replace('[VOICE_MSG]:',''))}" controls></audio></div>` : (m.text ? esc(m.text) : '')}<span class="time">${fmtDate(m.createdAt)}${statusHtml}</span>
               </div>`;
@@ -4840,12 +4909,21 @@ html{scroll-behavior:smooth}
       </div>
     </div>`;
   }
-  function meOrders(orders, me){
+function meOrders(orders, me){
     if (!orders.length) return emptyState('Заказов пока нет');
     const statusLabels = {
-      pending_payment:'Ожидает оплаты', paid:'Оплачено',
+      pending_payment:'Ожидает оплаты', paid:'Оплачено (эскроу)',
       in_progress:'В работе', waiting_for_approval:'На проверке',
-      completed:'Завершён', cancelled:'Отменён',
+      completed:'Завершён', cancelled:'Отменён', disputed:'Спор',
+    };
+    const statusHints = {
+      pending_payment:'Оплатите заказ через Safe Deal',
+      paid:'Средства в эскроу. Ожидайте начала работы.',
+      in_progress:'Исполнитель работает над заказом.',
+      waiting_for_approval:'Исполнитель сдал работу. Проверьте и примите.',
+      completed:'Заказ завершён. Оставьте отзыв!',
+      cancelled:'Заказ отменён. Средства возвращены.',
+      disputed:'Открыт спор. Админ разберётся.',
     };
     return orders.map(o => {
       const isFree = me.id === o.freelancerId;
@@ -4855,15 +4933,19 @@ html{scroll-behavior:smooth}
       const canStart = isFree && o.status === 'paid';
       const canDeliver = isFree && o.status === 'in_progress';
       const canApprove = !isFree && o.status === 'waiting_for_approval';
-      const canCancel = o.status !== 'completed' && o.status !== 'cancelled';
+      const canDispute = o.status === 'paid' || o.status === 'in_progress' || o.status === 'waiting_for_approval';
+      const canCancel = o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'disputed';
       const canReviewClient = isFree && o.status === 'completed' && !App.state.reviews.some(r => r.orderId === o.id && r.reviewerId === me.id && r.targetRole === 'client');
       const canReviewFl = !isFree && o.status === 'completed' && !App.state.reviews.some(r => r.orderId === o.id && r.reviewerId === me.id && r.targetRole === 'freelancer');
       const statusColor = {
         pending_payment:'#fef3c7,#92400e', paid:'#d1fae5,#065f46',
         in_progress:'#e5e7eb,#374151', waiting_for_approval:'#f3e8ff,#6b21a8',
-        completed:'#d1fae5,#065f46', cancelled:'#fee2e2,#991b1b',
+        completed:'#d1fae5,#065f46', cancelled:'#fee2e2,#991b1c',
+        disputed:'#fef3c7,#b45309',
       };
       const [bg, fg] = (statusColor[o.status]||'#e6e9ee,#1f2937').split(',');
+      const escrowBadge = o.escrowAmount > 0 && o.status !== 'completed' && o.status !== 'cancelled'
+        ? `<span class="chip" style="background:#dbeafe;color:#1d4ed8;font-size:11px">🛡️ Эскроу ${fmtMoney(o.escrowAmount)}</span>` : '';
       return `
         <div class="list-card" style="margin-bottom:10px">
           ${aviHTML(other)}
@@ -4871,18 +4953,22 @@ html{scroll-behavior:smooth}
             <div class="title">${esc(o.title)}</div>
             <div class="meta">
               <span class="card-badge" style="background:${bg};color:${fg}">${statusLabels[o.status]||o.status}</span>
+              ${escrowBadge}
               <span>${isFree?'Заказчик':'Исполнитель'}: <b>${esc(other?other.name:'—')}</b></span>
               <span>${fmtDateTime(o.createdAt)}</span>
-              ${App.state.reviews.filter(r=>r.orderId===o.id).map(r=>`<span>★ ${r.rating}</span>`).join('')}
             </div>
+            <div class="muted small" style="margin-top:4px">${statusHints[o.status]||''}</div>
+            ${o.disputeReason ? `<div class="small" style="margin-top:4px;color:#b45309">⚠ Причина спора: ${esc(o.disputeReason)}</div>` : ''}
+            ${App.state.reviews.filter(r=>r.orderId===o.id).map(r=>`<span>★ ${r.rating}</span>`).join('')}
           </div>
           <div class="right">
             <div class="price">${fmtMoney(o.price)}</div>
             <div class="row" style="gap:6px">
-              ${canPay   ? `<button class="btn-primary btn-sm" data-pay="${o.id}" title="Подтвердите перевод средств">💳 Я перевёл</button>`:''}
+              ${canPay   ? `<button class="btn-primary btn-sm" data-pay="${o.id}">💳 Оплатить</button>`:''}
               ${canStart  ? `<button class="btn-primary btn-sm" data-status="${o.id}|in_progress">✅ Принять в работу</button>`:''}
               ${canDeliver ? `<button class="btn-primary btn-sm" data-status="${o.id}|waiting_for_approval">📤 Сдал работу</button>`:''}
               ${canApprove ? `<button class="btn-primary btn-sm" data-status="${o.id}|completed">✔ Принять и завершить</button>`:''}
+              ${canDispute ? `<button class="btn-outline btn-sm" data-dispute="${o.id}" style="color:#b45309;border-color:#b45309">⚠ Оспорить</button>` : ''}
               ${canReviewFl ? `<button class="btn-primary btn-sm" data-review="${o.id}|freelancer">Оставить отзыв</button>`:''}
               ${canReviewClient ? `<button class="btn-outline btn-sm" data-review="${o.id}|client">Оценить заказчика</button>`:''}
               ${o.chatId || true ? `<button class="btn-outline btn-sm" data-msg-user="${other.id}">💬 Чат</button>` : ''}
@@ -5661,7 +5747,7 @@ html{scroll-behavior:smooth}
   /* ===========================================================
      ADMIN VIEWS
      =========================================================== */
-  function viewAdmin(){
+function viewAdmin(){
     if (!App.isAdmin()) return notFound('Доступ только администратору');
     const pendingJobs = App.state.tasks.filter(t => t.moderationStatus === 'pending').length;
     const pendingServices = App.state.services.filter(s => s.moderationStatus === 'pending').length;
@@ -5669,6 +5755,7 @@ html{scroll-behavior:smooth}
     const totalFreelancers = App.state.users.filter(u => u.role === 'freelancer').length;
     const totalOrders = App.state.orders.length;
     const ordersDone = App.state.orders.filter(o => o.status === 'completed').length;
+    const disputedOrders = App.state.orders.filter(o => o.status === 'disputed').length;
     const totalRevenue = App.state.orders.filter(o => o.status === 'completed').reduce((s, o) => s + (o.price||0), 0);
     const pendingComplaints = App.state.complaints ? App.state.complaints.filter(c => c.status === 'pending').length : '—';
     return `
@@ -5685,6 +5772,7 @@ html{scroll-behavior:smooth}
         <a class="tile" href="#admin-jobs" data-link style="text-decoration:none;cursor:pointer"><div class="label">Задания на модерации</div><div class="value">${pendingJobs}</div></a>
         <a class="tile" href="#admin-services" data-link style="text-decoration:none;cursor:pointer"><div class="label">Услуги на модерации</div><div class="value">${pendingServices}</div></a>
         <a class="tile" href="#admin-complaints" data-link style="text-decoration:none;cursor:pointer"><div class="label">Жалобы</div><div class="value">${pendingComplaints}</div></a>
+        <a class="tile" href="#admin-disputes" data-link style="text-decoration:none;cursor:pointer"><div class="label" style="color:#b45309">⚠ Споры</div><div class="value">${disputedOrders}</div></a>
         <a class="tile" href="#admin-users" data-link style="text-decoration:none;cursor:pointer"><div class="label">Пользователи</div><div class="value">${totalUsers}</div></a>
         <a class="tile" href="#admin-withdrawals" data-link style="text-decoration:none;cursor:pointer"><div class="label">Выводы средств</div></a>
       </div>
@@ -5791,7 +5879,7 @@ html{scroll-behavior:smooth}
       </div>
     </div>`;
   }
-  function viewAdminComplaints(){
+function viewAdminComplaints(){
     if (!App.isAdmin()) return notFound('Доступ только администратору');
     return `
     <div class="container">
@@ -5800,6 +5888,38 @@ html{scroll-behavior:smooth}
         <a class="btn-ghost" href="#admin" data-link>← Назад</a>
       </div>
       <div id="adminComplaintsList"><div class="card" style="text-align:center;padding:30px">Загрузка…</div></div>
+    </div>`;
+  }
+  function viewAdminDisputes(){
+    if (!App.isAdmin()) return notFound('Доступ только администратору');
+    const disputed = App.state.orders.filter(o => o.status === 'disputed');
+    return `
+    <div class="container">
+      <div class="page-title">
+        <h1>⚠ Споры по заказам</h1>
+        <a class="btn-ghost" href="#admin" data-link>← Назад</a>
+      </div>
+      ${disputed.length ? disputed.map(o => {
+        const client = App.user(o.clientId);
+        const freelancer = App.user(o.freelancerId);
+        return `<div class="card flat" style="margin-bottom:10px;padding:14px;border-left:4px solid #b45309">
+          <div class="between" style="gap:12px;flex-wrap:wrap">
+            <div style="flex:1">
+              <div style="font-weight:600">${esc(o.title)}</div>
+              <div class="small muted">Заказчик: ${esc(client?.name||'—')} · Исполнитель: ${esc(freelancer?.name||'—')}</div>
+              <div class="small muted">Сумма: ${fmtMoney(o.price)} · Эскроу: ${fmtMoney(o.escrowAmount)}</div>
+              <div style="margin:6px 0;padding:8px;background:#fef3c7;border-radius:6px;font-size:13px;color:#92400e">
+                <strong>Причина спора:</strong> ${esc(o.disputeReason || 'Не указана')}
+              </div>
+              <div class="small muted">${fmtDateTime(o.createdAt)}</div>
+            </div>
+            <div class="row" style="gap:6px;flex-wrap:wrap;flex-direction:column">
+              <button class="btn-primary btn-sm" data-resolve-dispute="${o.id}|completed" style="background:#1DBF73">✅ Завершить в пользу фрилансера</button>
+              <button class="btn-outline btn-sm" data-resolve-dispute="${o.id}|cancelled" style="color:#ef4444;border-color:#ef4444">↩️ Вернуть заказчику (отмена)</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('') : emptyState('Нет активных споров')}
     </div>`;
   }
   function viewAdminWithdrawals(){
@@ -5987,7 +6107,7 @@ html{scroll-behavior:smooth}
               let statusHtml = '<span class="msg-status"><span class="check">✓</span></span>';
               const bubble = document.createElement('div');
               bubble.className = 'bubble ' + (isMine ? 'out' : 'in');
-              const imgHtml = msg.imageUrl ? '<img class="chat-img" src="' + esc(msg.imageUrl) + '" alt="">' : '';
+              const imgHtml = msg.imageUrl ? '<img class="chat-img" src="' + esc(safeUrl(msg.imageUrl)) + '" alt="">' : '';
               bubble.innerHTML = imgHtml + (msg.text && msg.text.startsWith('[VOICE_MSG]:') ? '<div class="voice-message-player"><audio src="' + esc(msg.text.replace('[VOICE_MSG]:','')) + '" controls></audio></div>' : (msg.text ? esc(msg.text) : '')) + '<span class="time">' + fmtDate(msg.createdAt) + statusHtml + '</span>';
               body.appendChild(bubble);
               body.scrollTop = body.scrollHeight;
@@ -6130,6 +6250,7 @@ html{scroll-behavior:smooth}
       $$('[data-review]').forEach(b => b.onclick = () => { const [id, role] = b.dataset.review.split('|'); openReviewForm(id, role || 'freelancer'); });
       $$('[data-msg-user]').forEach(b => b.onclick = () => openChatWith(b.dataset.msgUser));
       $$('[data-pay]').forEach(b => b.onclick = () => openPaymentModal(b.dataset.pay));
+      $$('[data-dispute]').forEach(b => b.onclick = () => openDisputeModal(b.dataset.dispute));
     }
     if (route === 'mytasks'){
       $('#ctaLoginMy')?.addEventListener('click', () => showLogin());
@@ -6239,10 +6360,18 @@ html{scroll-behavior:smooth}
             </div>`;
           }).join('') : emptyState('Жалоб нет');
           // bind complaint buttons
-          $$('[data-resolve-complaint]').forEach(b => b.onclick = async () => {
+$$('[data-resolve-complaint]').forEach(b => b.onclick = async () => {
             const [id, status] = b.dataset.resolveComplaint.split('|');
             try { await App.resolveComplaint(id, status); toast('Статус обновлён','success'); render(); }
             catch(e){ toast(e.message,'error'); }
+          });
+          $$('[data-resolve-dispute]').forEach(b => b.onclick = async () => {
+            const [id, newStatus] = b.dataset.resolveDispute.split('|');
+            const label = newStatus === 'completed' ? 'завершить в пользу фрилансера (деньги перейдут исполнителю)' : 'отменить заказ (деньги вернутся заказчику)';
+            if (!confirm(`Вы уверены, что хотите ${label}?`)) return;
+            const ok = await App.setOrderStatus(id, newStatus);
+            if (ok){ toast('Спор разрешён','success'); render(); }
+            else toast('Не удалось разрешить спор','error');
           });
         } catch(e){ root.innerHTML = emptyState('Ошибка загрузки: ' + esc(e.message)); }
       })();
@@ -6308,15 +6437,45 @@ html{scroll-behavior:smooth}
       });
     }
   }
-  function emptyState(text, cta=''){
+function emptyState(text, cta=''){
+    const icons = {
+      orders: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9aa3af" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>',
+      tasks: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9aa3af" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>',
+      chat: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9aa3af" stroke-width="1.5"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>',
+      search: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9aa3af" stroke-width="1.5"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>',
+      default: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9aa3af" stroke-width="1.5"><path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>',
+    };
+    // Pick icon based on text keywords
+    const key = /заказ|order/i.test(text) ? 'orders' : /задан|task/i.test(text) ? 'tasks' : /сообщен|чат|chat|message/i.test(text) ? 'chat' : /не нашл|не найден|search|фильтр/i.test(text) ? 'search' : 'default';
     return `<div class="card" style="text-align:center;padding:36px 20px">
-      <div style="font-size:34px;opacity:.4;margin-bottom:6px">∅</div>
+      <div style="margin-bottom:12px;opacity:.5">${icons[key]}</div>
       <div class="muted" style="margin-bottom:12px">${esc(text)}</div>
       ${cta}
     </div>`;
   }
   function notFound(text){
-    return `<div class="container">${emptyState(text, '<a class="btn-primary" href="#home" data-link>На главную</a>')}</div>`;
+    return `<div class="container" style="padding:80px 0;text-align:center">
+      <div style="max-width:400px;margin:0 auto">
+        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1" style="opacity:.4"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14v-2m0-6h.01"/></svg>
+        <h2 style="margin:16px 0 8px;color:var(--t-text,#1f2937)">Страница не найдена</h2>
+        <p class="muted">${esc(text)}</p>
+        <a class="btn-primary" href="#home" data-link style="margin-top:16px">На главную</a>
+      </div>
+    </div>`;
+  }
+  function skeletonCards(count=3, type='card'){
+    return Array.from({length:count}, () => `
+      <div class="skel-card skel">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="skel skel-circle"></div>
+          <div style="flex:1">
+            <div class="skel skel-title"></div>
+            <div class="skel skel-block" style="width:80%"></div>
+          </div>
+        </div>
+        <div class="skel skel-block" style="width:95%;margin-top:12px"></div>
+        <div class="skel skel-block" style="width:60%"></div>
+      </div>`).join('');
   }
   /* ---------- forms (modals) ---------- */
   function openTaskForm(){
@@ -6583,22 +6742,40 @@ html{scroll-behavior:smooth}
       navigate('#messages?chat=' + r.chatId);
     });
   }
-  function openOrderForm(serviceId){
+function openOrderForm(serviceId){
     const s = App.service(serviceId); if (!s) return;
     if (App.me().id === s.freelancerId){ toast('Нельзя заказать собственную услугу','error'); return; }
+    const me = App.me();
+    const balance = me ? (me.balance || 0) : 0;
+    const enough = balance >= s.price;
     openModal(`
       <button class="close" data-close>&times;</button>
       <h2>Оформление заказа</h2>
       <p class="sub">${esc(s.title)} · ${fmtMoney(s.price)}</p>
+      <div style="background:var(--bg2);padding:14px;border-radius:8px;margin:12px 0;font-size:13px">
+        <p><strong>🛡️ Safe Deal</strong></p>
+        <p style="color:var(--gray)">Средства будут зарезервированы на платформе и переведутся исполнителю только после вашего подтверждения. При отмене — полный возврат.</p>
+        <hr style="margin:8px 0;border:none;border-top:1px solid var(--line)">
+        <p>Ваш баланс: <b style="color:${enough ? 'var(--green)' : '#ef4444'}">${fmtMoney(balance)}</b>
+        ${!enough ? `<br><span style="color:#ef4444">Недостаточно средств — пополните баланс на ${fmtMoney(s.price - balance)}</span>` : ''}</p>
+      </div>
       <form id="ordForm">
         <div class="form-row">
           <label>Комментарий к заказу (необязательно)</label>
           <textarea class="textarea" name="message" placeholder="Что важно учесть исполнителю..."></textarea>
         </div>
-        <button class="btn-primary btn-block btn-lg" type="submit">Подтвердить заказ</button>
+        <button class="btn-primary btn-block btn-lg" type="submit" ${!enough ? 'disabled' : ''}>${enough ? 'Оплатить через Safe Deal' : 'Недостаточно средств'}</button>
+        ${!enough ? `<button type="button" class="btn-outline btn-block" id="ordDepositBtn" style="margin-top:8px">Пополнить баланс</button>` : ''}
       </form>
     `);
     $('#modalRoot [data-close]').onclick = closeModal;
+    const depositBtn = $('#ordDepositBtn');
+    if (depositBtn){
+      depositBtn.onclick = () => {
+        closeModal();
+        showDepositModal('deposit');
+      };
+    }
     $('#ordForm').addEventListener('submit', async e => {
       e.preventDefault();
       const btn = e.target.querySelector('button[type=submit]');
@@ -6609,7 +6786,7 @@ html{scroll-behavior:smooth}
       if (r?.dup){ toast('Вы уже оформили этот заказ','error'); return; }
       if (r?.err){ toast('Ошибка: ' + r.err,'error'); return; }
       incrementQuestProgress('makeOrder');
-      closeModal(); toast('Заказ оформлен. Открыт чат с фрилансером.','success');
+      closeModal(); toast('Заказ оформлен и оплачен через Safe Deal!','success');
       navigate('#messages?chat=' + r.chatId);
     });
   }
@@ -6657,44 +6834,139 @@ html{scroll-behavior:smooth}
       closeModal(); toast('Спасибо за отзыв!','success'); render();
     });
   }
-  async function openPaymentModal(orderId){
+async function openPaymentModal(orderId){
     const o = App.order(orderId); if (!o) return;
+    const me = App.me();
     const freelancer = App.user(o.freelancerId);
-    const details = freelancer?.paymentDetails || 'Не указаны';
     if (o.status !== 'pending_payment'){
       toast('Заказ уже оплачен или обрабатывается','info'); return;
     }
+    const balance = me ? (me.balance || 0) : 0;
+    const enough = balance >= o.price;
     openModal(`
       <button class="close" data-close>&times;</button>
-      <h2>💳 Оплата заказа</h2>
-      <p class="sub">${esc(o.title)} — ${fmtMoney(o.price)}</p>
+      <h2>🛡️ Оплата через Safe Deal</h2>
+      <p class="sub">${esc(o.title)} — <b>${fmtMoney(o.price)}</b></p>
       <div style="background:var(--bg2);padding:16px;border-radius:8px;margin:12px 0">
-        <p><strong>💼 Безопасная сделка</strong></p>
-        <p style="font-size:13px;color:var(--gray)">Переведите средства напрямую исполнителю и нажмите кнопку ниже, чтобы подтвердить оплату.</p>
+        <p><strong>🛡️ Безопасная сделка (эскроу)</strong></p>
+        <p style="font-size:13px;color:var(--gray)">Средства резервируются на балансе платформы и переводятся исполнителю <b>только после подтверждения</b> вами получения работы. При отмене заказа деньги возвращаются на ваш баланс.</p>
         <hr style="margin:12px 0;border:none;border-top:1px solid var(--line)">
-        <p><strong>Реквизиты исполнителя:</strong></p>
-        <p style="font-family:monospace;background:var(--bg);padding:10px;border-radius:4px">${esc(details)}</p>
-        <p style="font-size:13px;color:var(--red)">⚠ Убедитесь, что перевели точную сумму <b>${fmtMoney(o.price)}</b></p>
+        <p><strong>Ваш баланс:</strong> <span style="font-size:18px;font-weight:700;color:${enough ? 'var(--green)' : '#ef4444'}">${fmtMoney(balance)}</span></p>
+        ${enough ? `<p style="font-size:13px;color:var(--green)">✅ Достаточно для оплаты</p>` : `<p style="font-size:13px;color:#ef4444">❌ Недостаточно средств. Пополните баланс на ${fmtMoney(o.price - balance)}.</p>`}
       </div>
-      <div class="form-row">
-        <label>Подтверждение перевода (скриншот, ID транзакции)</label>
-        <input class="input" id="paymentProof" placeholder="Скриншот, ID перевода или любое подтверждение">
-        <div class="muted small">Вы сможете указать его сейчас или позже через редактирование заказа</div>
-      </div>
-      <button class="btn-primary btn-block btn-lg" id="confirmPayBtn">Я перевёл средства</button>
+      ${!enough ? `
+        <div class="form-row">
+          <label>Пополнить баланс</label>
+          <input class="input" id="depositAmount" type="number" min="${o.price - balance}" placeholder="${o.price - balance}" value="${o.price - balance}">
+          <div class="muted small">Минимум ${fmtMoney(o.price - balance)} для оплаты заказа</div>
+        </div>
+      ` : ''}
+      <button class="btn-primary btn-block btn-lg" id="confirmPayBtn" ${!enough ? 'disabled' : ''}>${enough ? 'Оплатить из баланса' : 'Недостаточно средств'}</button>
+      ${!enough ? `<button class="btn-outline btn-block" id="depositPayBtn" style="margin-top:8px">Пополнить и оплатить</button>` : ''}
     `);
     $('#modalRoot [data-close]').onclick = closeModal;
-    $('#confirmPayBtn').onclick = async () => {
-      const proof = $('#paymentProof').value.trim();
-      const btn = $('#confirmPayBtn');
-      btn.disabled = true; btn.textContent = 'Отправляем…';
-      const ok = await App.setOrderStatus(orderId, 'paid', proof);
-      if (!ok){ toast('Ошибка подтверждения','error'); btn.disabled = false; btn.textContent = 'Я перевёл средства'; return; }
-      closeModal(); toast('Оплата подтверждена! Ожидайте начала работы.','success'); render();
-      if (freelancer?.email){
-        App.sendEmail(freelancer.email, 'Заказ оплачен — MiniLIT',
-          `<h2>Заказ #${o.id} оплачен</h2><p>Заказ «${esc(o.title)}» оплачен. Можете приступать к работе.</p>`);
+    const confirmBtn = $('#confirmPayBtn');
+    const depositInput = $('#depositAmount');
+    const depositBtn = $('#depositPayBtn');
+    // Если недостаточно — кнопка пополнения
+    if (!enough && depositBtn){
+      depositBtn.onclick = async () => {
+        const amount = depositInput ? Number(depositInput.value) : (o.price - balance);
+        if (!amount || amount < (o.price - balance)){
+          toast('Укажите сумму для пополнения','error'); return;
+        }
+        depositBtn.disabled = true; depositBtn.textContent = 'Пополняем…';
+        try {
+          await App.deposit(amount);
+          toast('Баланс пополнен','success');
+          closeModal();
+          // Переоткрываем модалку оплаты
+          setTimeout(() => openPaymentModal(orderId), 300);
+        } catch(e){
+          toast('Ошибка пополнения: ' + e.message, 'error');
+          depositBtn.disabled = false; depositBtn.textContent = 'Пополнить и оплатить';
+        }
+      };
+    }
+    if (enough && confirmBtn){
+      confirmBtn.onclick = async () => {
+        confirmBtn.disabled = true; confirmBtn.textContent = 'Оплачиваем…';
+        // Эскроу-оплата через RPC
+        try {
+          const { data: escrowOk, error: escrowErr } = await sb.rpc('escrow_pay', { p_order_id: orderId });
+          if (escrowErr || !escrowOk){
+            toast('Ошибка оплаты: ' + (escrowErr?.message || 'Недостаточно средств'), 'error');
+            confirmBtn.disabled = false; confirmBtn.textContent = 'Оплатить из баланса';
+            return;
+          }
+          // Обновляем локальный баланс
+          if (me) me.balance = (me.balance || 0) - o.price;
+          // Обновляем заказ в кэше
+          const { data: updatedOrder } = await sb.from('orders').select('*').eq('id', orderId).single();
+          if (updatedOrder) upsertById(App.state.orders, fromOrder(updatedOrder));
+          closeModal();
+          toast('Оплата прошла! Средства в эскроу. Ожидайте начала работы.','success');
+          render();
+          // Уведомляем фрилансера
+          if (freelancer?.email){
+            App.sendEmail(freelancer.email, 'Заказ оплачен — MiniLIT',
+              `<h2>Заказ #${o.id} оплачен</h2><p>Заказ «${esc(o.title)}» оплачен через Safe Deal. Можете приступать к работе.</p>`);
+          }
+          App.createNotification(o.freelancerId, 'order',
+            'Заказ оплачен через Safe Deal',
+            `«${o.title}» — ${fmtMoney(o.price)}. Можете приступать к работе.`, { orderId: o.id },
+            '#me?tab=orders');
+        } catch(e){
+          toast('Ошибка: ' + (e.message||'Не удалось оплатить'), 'error');
+          confirmBtn.disabled = false; confirmBtn.textContent = 'Оплатить из баланса';
+        }
+      };
+    }
+  }
+  function openDisputeModal(orderId){
+    const o = App.order(orderId); if (!o) return;
+    const me = App.me(); if (!me) return;
+    if (o.status !== 'paid' && o.status !== 'in_progress' && o.status !== 'waiting_for_approval'){
+      toast('Оспорить можно только активный заказ','error'); return;
+    }
+    openModal(`
+      <button class="close" data-close>&times;</button>
+      <h2>⚠ Открыть спор</h2>
+      <p class="sub">Заказ «${esc(o.title)}» на сумму ${fmtMoney(o.price)}</p>
+      <div style="background:#fef3c7;padding:14px;border-radius:8px;margin:12px 0;font-size:13px;color:#92400e">
+        <strong>Что происходит при открытии спора:</strong><br>
+        • Средства замораживаются в эскроу до разрешения<br>
+        • Заказ переходит в статус «Спор»<br>
+        • Администрация рассмотрит ситуацию и примет решение<br>
+        • Работа приостанавливается до завершения спора
+      </div>
+      <div class="form-row">
+        <label>Опишите причину спора</label>
+        <textarea class="textarea" id="disputeReason" required minlength="20" placeholder="Подробно опишите, в чём проблема. Минимум 20 символов."></textarea>
+        <div class="err" id="disputeErr"></div>
+      </div>
+      <button class="btn-primary btn-block btn-lg" id="submitDispute" style="background:#b45309">Открыть спор</button>
+    `);
+    $('#modalRoot [data-close]').onclick = closeModal;
+    $('#submitDispute').onclick = async () => {
+      const reason = $('#disputeReason').value.trim();
+      const errEl = $('#disputeErr');
+      if (!reason || reason.length < 20){
+        errEl.textContent = 'Опишите причину подробнее (минимум 20 символов)';
+        return;
       }
+      errEl.textContent = '';
+      const btn = $('#submitDispute');
+      btn.disabled = true; btn.textContent = 'Открываем спор…';
+      const ok = await App.setOrderStatus(orderId, 'disputed', null, reason);
+      if (!ok){
+        toast('Не удалось открыть спор','error');
+        btn.disabled = false; btn.textContent = 'Открыть спор';
+        return;
+      }
+      closeModal();
+      toast('Спор открыт. Администрация разберётся в ситуации.','success');
+      render();
     };
   }
   function openEditProfile(){
