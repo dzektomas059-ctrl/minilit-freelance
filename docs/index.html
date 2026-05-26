@@ -1807,13 +1807,23 @@ const fromOrder = o => o && ({
   }
   /* ===== connects check helper ===== */
   async function checkConnects(userId){
-    const { data: profile, error } = await sb.from('profiles').select('connects_remaining').eq('id', userId).single();
-    if (error || !profile) return { ok: false, err: 'Ошибка проверки коннектов' };
-    if (profile.connects_remaining < 1){
+    const me = App.me();
+    if (!me || me.id !== userId) {
+      const { data: profile, error } = await sb.from('profiles').select('connects_remaining').eq('id', userId).single();
+      if (error || !profile) return { ok: false, err: 'Ошибка проверки коннектов' };
+      const connects = profile.connects_remaining ?? 50;
+      if (connects < 1){
+        showCustomNotification('Недостаточно коннектов', 'У вас закончились коннекты. Пополнение происходит ежемесячно.', 'error');
+        return { ok: false, err: 'no_connects' };
+      }
+      return { ok: true, connects };
+    }
+    const connects = me.connectsRemaining ?? 50;
+    if (connects < 1){
       showCustomNotification('Недостаточно коннектов', 'У вас закончились коннекты. Пополнение происходит ежемесячно.', 'error');
       return { ok: false, err: 'no_connects' };
     }
-    return { ok: true, connects: profile.connects_remaining };
+    return { ok: true, connects };
   }
   async function spendConnect(userId, currentConnects){
     const newConnects = Math.max(0, (currentConnects||50) - 1);
@@ -3213,7 +3223,7 @@ async sendMessage(chatId, senderId, text, imageUrl){
       if ((this._tavernProposals||[]).some(p => p.projectId === projectId && p.freelancerId === me.id)){
         return { error:'Вы уже откликнулись на этот проект' };
       }
-      if (me.connectsRemaining < 1) return { error:'Недостаточно коннектов. Осталось: ' + me.connectsRemaining };
+      if ((me.connectsRemaining ?? 50) < 1) return { error:'Недостаточно коннектов. Осталось: ' + (me.connectsRemaining ?? 50) };
       const { data, error } = await sb.from('tavern_proposals').insert([{
         project_id: projectId, freelancer_id: me.id,
         cover_letter: coverLetter.trim(), price: Math.max(0, Number(price)||0),
