@@ -302,6 +302,8 @@ img{max-width:100%;display:block}
 .chat-form-row{display:flex;gap:8px;align-items:center}
 .chat-attach-btn{width:38px;height:38px;border:none;background:transparent;border-radius:8px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray);transition:.15s;flex-shrink:0}
 .chat-attach-btn:hover{background:var(--green-l);color:var(--green)}
+.chat-file{margin-bottom:6px}.chat-file-link{color:var(--green);text-decoration:underline;word-break:break-all;font-size:13px}
+.timer-btn[data-running="1"]{background:var(--green);color:#fff;border-color:var(--green)!important}
 .chat-preview{position:relative;display:inline-flex;align-self:flex-start;max-width:180px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
 .chat-preview img{width:100%;height:auto;display:block;max-height:120px;object-fit:cover}
 .chat-preview-clear{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -1673,7 +1675,7 @@ const fromOrder = o => o && ({
   });
     const fromMessage = m => m && ({
     id:m.id, chatId:m.chat_id, senderId:m.sender_id, text:m.text||'',
-    imageUrl:m.image_url||'',
+    imageUrl:m.image_url||'', fileName:m.file_name||'', fileType:m.file_type||'',
     read: !!m.read,
     deliveredAt: m.delivered_at ? Date.parse(m.delivered_at) : null,
     readAt: m.read_at ? Date.parse(m.read_at) : null,
@@ -2454,21 +2456,23 @@ async setOrderStatus(id, status, paymentProof, disputeReason){
       upsertById(this.state.chats, chat);
       return chat;
     },
-async sendMessage(chatId, senderId, text, imageUrl){
+async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
       const t = (text||'').trim();
-      if (!t && !imageUrl) return null;
+      if (!t && !imageUrl && !fileName) return null;
       if (t.length > 5000) return null;
       if (!rateLimit('msg:'+senderId, 2, 1000)) return null;
       const payload = { chat_id: chatId, sender_id: senderId };
       if (t) payload.text = t;
       if (imageUrl) payload.image_url = imageUrl;
+      if (fileName) payload.file_name = fileName;
+      if (fileType) payload.file_type = fileType;
       const { data, error } = await sb.from('messages').insert([payload]).select().single();
       if (error) return null;
       const m = fromMessage(data);
             upsertById(this.state.messages, m);
       // update chat last_text/last_at locally
       const c = this.chat(chatId);
-      const displayText = t || '[Фото]';
+      const displayText = t || (imageUrl&&(!fileType||fileType.startsWith('image/'))?'[Фото]':(fileName?'[Файл: '+fileName+']':'[Файл]'));
       if (c){ c.lastText = displayText; c.lastAt = m.createdAt; }
       // notify recipient
       const me = this.me();
@@ -3303,6 +3307,38 @@ async sendMessage(chatId, senderId, text, imageUrl){
       }
     },
     seed(){ /* demo data lives in Supabase, not localStorage */ },
+    /* ===== time tracking ===== */
+    async startTimer(orderId){
+      const me = this.me();
+      if (!me) throw new Error('Войдите в аккаунт');
+      const { data, error } = await sb.from('time_entries').insert([
+        { order_id: orderId, user_id: me.id, start_time: new Date().toISOString() }
+      ]).select().single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    async stopTimer(entryId){
+      const end = new Date().toISOString();
+      const { data: entry, error: fetchErr } = await sb.from('time_entries').select('*').eq('id', entryId).single();
+      if (fetchErr || !entry) throw new Error('Запись не найдена');
+      const start = Date.parse(entry.start_time);
+      const duration = Math.round((Date.now() - start) / 1000);
+      const { data, error } = await sb.from('time_entries').update({
+        end_time: end, duration
+      }).eq('id', entryId).select().single();
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    async getTimeEntries(orderId){
+      const { data, error } = await sb.from('time_entries').select('*')
+        .eq('order_id', orderId).order('start_time', { ascending: false });
+      if (error) return [];
+      return data;
+    },
+    async getTotalTime(orderId){
+      const entries = await this.getTimeEntries(orderId);
+      return entries.reduce((sum, e) => sum + (e.duration || 0), 0);
+    },
   };
   /* ---------- realtime UX helpers ---------- */
   function scheduleRender(){
@@ -4740,21 +4776,23 @@ app.innerHTML = html;
                 else if (m.deliveredAt) statusHtml = '<span class="msg-status"><span class="check done">✓✓</span></span>';
                 else statusHtml = '<span class="msg-status"><span class="check">✓</span></span>';
               }
-                            const imgHtml = m.imageUrl ? `<img class="chat-img" src="${esc(safeUrl(m.imageUrl))}" alt="">` : '';
+                            const imgHtml = m.imageUrl && (!m.fileType || m.fileType.startsWith('image/')) ? `<img class="chat-img" src="${esc(safeUrl(m.imageUrl))}" alt="">` : '';
+              const fileHtml = m.fileName && (!m.imageUrl || (m.fileType && !m.fileType.startsWith('image/'))) ? `<div class="chat-file"><a href="${esc(m.imageUrl)}" download="${esc(m.fileName)}" class="chat-file-link">📎 ${esc(m.fileName)}</a></div>` : '';
               return `<div class="bubble ${isMine?'out':'in'}">
-                ${imgHtml}${m.text && m.text.startsWith('[VOICE_MSG]:') ? `<div class="voice-message-player"><audio src="${esc(m.text.replace('[VOICE_MSG]:',''))}" controls></audio></div>` : (m.text ? esc(m.text) : '')}<span class="time">${fmtDate(m.createdAt)}${statusHtml}</span>
+                ${imgHtml}${fileHtml}${m.text && m.text.startsWith('[VOICE_MSG]:') ? `<div class="voice-message-player"><audio src="${esc(m.text.replace('[VOICE_MSG]:',''))}" controls></audio></div>` : (m.text ? esc(m.text) : '')}<span class="time">${fmtDate(m.createdAt)}${statusHtml}</span>
               </div>`;
             }).join('')}
           </div>
           <form class="chat-form" id="chatForm">
             <div class="chat-form-inner">
               <div class="chat-preview" id="chatPreview" style="display:none">
-                <img id="chatPreviewImg" alt="">
+                <img id="chatPreviewImg" alt="" style="display:none">
+                <span id="chatPreviewName" style="display:none"></span>
                 <button type="button" id="chatPreviewClear" class="chat-preview-clear">&times;</button>
               </div>
               <div class="chat-form-row">
                 <input class="input" name="text" placeholder="Напишите сообщение..." autocomplete="off">
-                <button type="button" class="chat-attach-btn" id="chatAttachBtn" aria-label="Прикрепить фото">📎</button>
+                <button type="button" class="chat-attach-btn" id="chatAttachBtn" aria-label="Прикрепить файл">📎</button>
                 <button type="button" class="chat-action-btn" id="chatVoiceBtn" onclick="toggleVoiceRecord()" aria-label="Голосовое сообщение">
                   <svg class="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 19v4M8 23h8"/>
@@ -4763,7 +4801,7 @@ app.innerHTML = html;
                 <button class="btn-primary" type="submit" name="sendBtn">Отправить</button>
               </div>
             </div>
-            <input type="file" id="chatFileInput" accept="image/*" style="display:none">
+            <input type="file" id="chatFileInput" accept="*/*" style="display:none">
           </form>
         </div>
       </div>
@@ -5003,6 +5041,7 @@ function meOrders(orders, me){
             </div>
             <div class="muted small" style="margin-top:4px">${statusHints[o.status]||''}</div>
             ${o.disputeReason ? `<div class="small" style="margin-top:4px;color:#b45309">⚠ Причина спора: ${esc(o.disputeReason)}</div>` : ''}
+            <div class="time-tracking small muted" data-order="${o.id}" style="margin-top:4px;font-size:11px"></div>
             ${App.state.reviews.filter(r=>r.orderId===o.id).map(r=>`<span>★ ${r.rating}</span>`).join('')}
           </div>
           <div class="right">
@@ -5016,6 +5055,7 @@ function meOrders(orders, me){
               ${canReviewFl ? `<button class="btn-primary btn-sm" data-review="${o.id}|freelancer">Оставить отзыв</button>`:''}
               ${canReviewClient ? `<button class="btn-outline btn-sm" data-review="${o.id}|client">Оценить заказчика</button>`:''}
               ${o.chatId || true ? `<button class="btn-outline btn-sm" data-msg-user="${other.id}">💬 Чат</button>` : ''}
+              ${(canStart || canDeliver || o.status === 'in_progress') && isFree ? `<button class="btn-outline btn-sm timer-btn" data-timer="${o.id}" data-running="${localStorage.getItem('timer_'+o.id) ? '1' : '0'}">${localStorage.getItem('timer_'+o.id) ? '⏹ Стоп' : '⏱ Старт'}</button>` : ''}
             </div>
           </div>
         </div>`;
@@ -6125,6 +6165,8 @@ function viewAdminComplaints(){
           const fileInput = document.getElementById('chatFileInput');
           const previewImg = document.getElementById('chatPreviewImg');
           const imageData = fileInput?.dataset?.image || '';
+          const fileName = fileInput?.dataset?.fileName || '';
+          const fileType = fileInput?.dataset?.fileType || '';
           if (!text && !imageData) return;
           const me = App.me(); if (!me) return;
           const chats = App.chatsFor(me.id);
@@ -6132,7 +6174,7 @@ function viewAdminComplaints(){
           if (!chatId) return;
           form.text.disabled = true;
           form.sendBtn.disabled = true;
-          const msg = await App.sendMessage(chatId, me.id, text, imageData || null);
+          const msg = await App.sendMessage(chatId, me.id, text, imageData || null, fileName || null, fileType || null);
           form.text.disabled = false;
           form.sendBtn.disabled = false;
           if (!msg) { toast('Слишком часто. Подожди секунду.','error'); return; }
@@ -6140,8 +6182,10 @@ function viewAdminComplaints(){
           form.text.focus();
           // Clear preview
           const preview = document.getElementById('chatPreview');
-          if (preview) { preview.style.display = 'none'; previewImg.src = ''; }
-          if (fileInput) { fileInput.value = ''; delete fileInput.dataset.image; }
+          const img = document.getElementById('chatPreviewImg');
+          const nameEl = document.getElementById('chatPreviewName');
+          if (preview) { preview.style.display = 'none'; if(img)img.src=''; if(img)img.style.display='none'; if(nameEl){nameEl.textContent='';nameEl.style.display='none';} }
+          if (fileInput) { fileInput.value = ''; delete fileInput.dataset.image; delete fileInput.dataset.fileName; delete fileInput.dataset.fileType; }
           // Добавляем сообщение в DOM напрямую, без полной перерисовки
           if (msg) {
             incrementQuestProgress('sendChat');
@@ -6152,8 +6196,10 @@ function viewAdminComplaints(){
               let statusHtml = '<span class="msg-status"><span class="check">✓</span></span>';
               const bubble = document.createElement('div');
               bubble.className = 'bubble ' + (isMine ? 'out' : 'in');
-              const imgHtml = msg.imageUrl ? '<img class="chat-img" src="' + esc(safeUrl(msg.imageUrl)) + '" alt="">' : '';
-              bubble.innerHTML = imgHtml + (msg.text && msg.text.startsWith('[VOICE_MSG]:') ? '<div class="voice-message-player"><audio src="' + esc(msg.text.replace('[VOICE_MSG]:','')) + '" controls></audio></div>' : (msg.text ? esc(msg.text) : '')) + '<span class="time">' + fmtDate(msg.createdAt) + statusHtml + '</span>';
+              const isImage = msg.imageUrl && (!msg.fileType || msg.fileType.startsWith('image/'));
+              const imgHtml = msg.imageUrl && isImage ? '<img class="chat-img" src="' + esc(safeUrl(msg.imageUrl)) + '" alt="">' : '';
+              const fileHtml = msg.fileName && (!msg.imageUrl || (msg.fileType && !isImage)) ? '<div class="chat-file"><a href="' + esc(msg.imageUrl) + '" download="' + esc(msg.fileName) + '" class="chat-file-link">📎 ' + esc(msg.fileName) + '</a></div>' : '';
+              bubble.innerHTML = imgHtml + fileHtml + (msg.text && msg.text.startsWith('[VOICE_MSG]:') ? '<div class="voice-message-player"><audio src="' + esc(msg.text.replace('[VOICE_MSG]:','')) + '" controls></audio></div>' : (msg.text ? esc(msg.text) : '')) + '<span class="time">' + fmtDate(msg.createdAt) + statusHtml + '</span>';
               body.appendChild(bubble);
               body.scrollTop = body.scrollHeight;
             }
@@ -6172,7 +6218,8 @@ function viewAdminComplaints(){
           if (!file) return;
           try {
             let dataUrl;
-            if (file.size > 512000){ // > 500KB — compress
+            const isImage = file.type.startsWith('image/');
+            if (isImage && file.size > 512000){ // >500KB — compress
               dataUrl = await compressAndConvertImage(file);
             } else {
               const reader = new FileReader();
@@ -6184,11 +6231,25 @@ function viewAdminComplaints(){
             }
             const preview = document.getElementById('chatPreview');
             const img = document.getElementById('chatPreviewImg');
-            if (preview && img){
-              img.src = dataUrl;
+            const nameEl = document.getElementById('chatPreviewName');
+            if (preview){
               preview.style.display = 'block';
+              if (isImage && img){
+                img.src = dataUrl;
+                img.style.display = 'inline';
+                if (nameEl) nameEl.style.display = 'none';
+              } else if (nameEl){
+                nameEl.textContent = '📎 ' + file.name;
+                nameEl.style.display = 'inline';
+                if (img) img.style.display = 'none';
+              }
             }
-            document.getElementById('chatFileInput').dataset.image = dataUrl;
+            const input = document.getElementById('chatFileInput');
+            if (input){
+              input.dataset.image = dataUrl;
+              input.dataset.fileName = file.name;
+              input.dataset.fileType = file.type;
+            }
           } catch(e){
             toast('Ошибка загрузки файла','error');
           }
@@ -6199,7 +6260,7 @@ function viewAdminComplaints(){
           const input = document.getElementById('chatFileInput');
           if (preview) preview.style.display = 'none';
           if (img) img.src = '';
-          if (input) { input.value = ''; delete input.dataset.image; }
+          if (input) { input.value = ''; delete input.dataset.image; delete input.dataset.fileName; delete input.dataset.fileType; }
         });
         // Drag & Drop for chat
         const chatFormRow = document.querySelector('.chat-form');
@@ -6221,10 +6282,11 @@ function viewAdminComplaints(){
             chatFormRow.classList.remove('drag-over');
             dragCounter = 0;
             const file = e.dataTransfer.files[0];
-            if (!file || !file.type.startsWith('image/')) return;
+            if (!file) return;
             try {
               let dataUrl;
-              if (file.size > 512000){
+              const isImage = file.type.startsWith('image/');
+              if (isImage && file.size > 512000){
                 dataUrl = await compressAndConvertImage(file);
               } else {
                 const reader = new FileReader();
@@ -6236,8 +6298,24 @@ function viewAdminComplaints(){
               }
               const preview = document.getElementById('chatPreview');
               const img = document.getElementById('chatPreviewImg');
-              if (preview && img){ img.src = dataUrl; preview.style.display = 'block'; }
-              document.getElementById('chatFileInput').dataset.image = dataUrl;
+              const nameEl = document.getElementById('chatPreviewName');
+              if (preview){
+                preview.style.display = 'block';
+                if (isImage && img){
+                  img.src = dataUrl; img.style.display = 'inline';
+                  if (nameEl) nameEl.style.display = 'none';
+                } else if (nameEl){
+                  nameEl.textContent = '📎 ' + file.name;
+                  nameEl.style.display = 'inline';
+                  if (img) img.style.display = 'none';
+                }
+              }
+              const input = document.getElementById('chatFileInput');
+              if (input){
+                input.dataset.image = dataUrl;
+                input.dataset.fileName = file.name;
+                input.dataset.fileType = file.type;
+              }
             } catch(e){ toast('Ошибка загрузки','error'); }
           });
         }
@@ -6296,6 +6374,37 @@ function viewAdminComplaints(){
       $$('[data-msg-user]').forEach(b => b.onclick = () => openChatWith(b.dataset.msgUser));
       $$('[data-pay]').forEach(b => b.onclick = () => openPaymentModal(b.dataset.pay));
       $$('[data-dispute]').forEach(b => b.onclick = () => openDisputeModal(b.dataset.dispute));
+      $$('[data-timer]').forEach(b => b.onclick = async () => {
+        const orderId = b.dataset.timer;
+        const key = 'timer_' + orderId;
+        const activeEntryId = localStorage.getItem(key);
+        try {
+          if (activeEntryId) {
+            await App.stopTimer(activeEntryId);
+            localStorage.removeItem(key);
+            toast('Таймер остановлен','success');
+          } else {
+            const entry = await App.startTimer(orderId);
+            localStorage.setItem(key, entry.id);
+            toast('Таймер запущен','success');
+          }
+          render();
+        } catch(e){ toast('Ошибка таймера','error'); }
+      });
+      // Загружаем общее время для заказов
+      (async () => {
+        const els = $$('.time-tracking[data-order]');
+        const orderIds = [...new Set(els.map(el => el.dataset.order))];
+        await Promise.all(orderIds.map(async id => {
+          const total = await App.getTotalTime(id);
+          const el = document.querySelector(`.time-tracking[data-order="${id}"]`);
+          if (el) {
+            const mins = Math.floor(total / 60);
+            const secs = total % 60;
+            el.textContent = total > 0 ? `⏱ Затрачено: ${mins} мин ${secs} сек` : '';
+          }
+        }));
+      })();
     }
     if (route === 'mytasks'){
       $('#ctaLoginMy')?.addEventListener('click', () => showLogin());

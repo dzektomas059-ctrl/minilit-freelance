@@ -40,6 +40,22 @@ BEGIN
     ALTER TABLE messages ADD COLUMN image_url text;
   END IF;
 END $$;
+-- 0b. Добавляем file_name/file_type в messages (для любых файлов в чат)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'messages' AND column_name = 'file_name'
+  ) THEN
+    ALTER TABLE messages ADD COLUMN file_name text;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'messages' AND column_name = 'file_type'
+  ) THEN
+    ALTER TABLE messages ADD COLUMN file_type text;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_chats_client ON chats (client_id);
 CREATE INDEX IF NOT EXISTS idx_chats_freelancer ON chats (freelancer_id);
 
@@ -742,5 +758,35 @@ BEGIN
     WHERE pubname = 'supabase_realtime' AND tablename = 'orders'
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE orders;
+  END IF;
+END $$;
+
+-- 11. Таблица учёта времени time_entries
+CREATE TABLE IF NOT EXISTS public.time_entries (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  order_id uuid REFERENCES public.orders(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
+  start_time timestamptz NOT NULL DEFAULT now(),
+  end_time timestamptz,
+  duration int DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.time_entries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "time_entries_participants" ON public.time_entries
+  FOR ALL USING (
+    user_id = auth.uid()
+    OR order_id IN (
+      SELECT id FROM public.orders WHERE client_id = auth.uid() OR freelancer_id = auth.uid()
+    )
+  );
+
+-- Добавляем время в realtime
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'time_entries'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE time_entries;
   END IF;
 END $$;

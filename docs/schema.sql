@@ -439,6 +439,30 @@ begin
 end;
 $$;
 
+-- ============================================================
+-- time_entries table for time tracking per order
+-- ============================================================
+create table public.time_entries (
+  id uuid default gen_random_uuid() primary key,
+  order_id uuid references public.orders(id) on delete cascade,
+  user_id uuid references public.profiles(id) on delete cascade,
+  start_time timestamptz not null default now(),
+  end_time timestamptz,
+  duration int default 0,
+  created_at timestamptz default now()
+);
+alter table public.time_entries enable row level security;
+create policy "time_entries_participants" on public.time_entries
+  for all using (
+    user_id = auth.uid()
+    or order_id in (
+      select id from public.orders where client_id = auth.uid() or freelancer_id = auth.uid()
+    )
+  );
+
+create index if not exists idx_time_entries_order on public.time_entries (order_id);
+create index if not exists idx_time_entries_user on public.time_entries (user_id);
+
 drop trigger if exists trg_order_state on orders;
 create trigger trg_order_state
   before update of status on orders
