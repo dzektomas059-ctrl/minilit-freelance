@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#1DBF73" media="(prefers-color-scheme: light)">
 <meta name="description" content="MiniLIT — биржа заданий и магазин услуг. Заказчики получают исполнителей за пару кликов, фрилансеры — стабильный поток заказов.">
 <link rel="manifest" href="./manifest.json">
+<link rel="sitemap" type="application/xml" href="./sitemap.xml">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -3326,23 +3327,29 @@ async sendMessage(chatId, senderId, text, imageUrl){
     set(document.getElementById('bnMsgBadge'));
   }
   let _markAllReadTimer = null;
-  let _notifReadSnapshot = null;
+  let _markAllReadIds = null;
   function autoMarkNotificationsRead(){
     const me = App.me(); if (!me) return;
     if (App.state.notifUnread === 0) return;
     if (_markAllReadTimer) clearTimeout(_markAllReadTimer);
-    _notifReadSnapshot = { unread: App.state.notifUnread, reads: App.state.notifications.map(n => n.read) };
+    // capture unread IDs before optimistic update
+    _markAllReadIds = App.state.notifications.filter(n => n.userId === me.id && !n.read).map(n => n.id);
+    if (!_markAllReadIds.length) return;
+    // optimistic update
     App.state.notifUnread = 0;
     for (const n of App.state.notifications) n.read = true;
     updateNotificationBadge();
     renderNotificationDropdown();
     _markAllReadTimer = setTimeout(async () => {
       _markAllReadTimer = null;
-      const ok = await App.markAllNotificationsRead();
-      if (!ok){
-        App.state.notifUnread = _notifReadSnapshot.unread;
-        App.state.notifications.forEach((n, i) => n.read = _notifReadSnapshot.reads[i]);
-        _notifReadSnapshot = null;
+      const ids = _markAllReadIds; _markAllReadIds = null;
+      if (!ids || !ids.length) return;
+      const { error } = await sb.from('notifications').update({ is_read: true }).in('id', ids);
+      if (error){
+        // rollback
+        for (const n of App.state.notifications){ if (ids.includes(n.id)) n.read = false; }
+        App.state.notifUnread = ids.length;
+        _markAllReadIds = null;
         updateNotificationBadge();
         renderNotificationDropdown();
         toast('Не удалось отметить уведомления как прочитанные','error');
@@ -7400,6 +7407,9 @@ async function openPaymentModal(orderId){
         setTimeout(() => tip.classList.remove('visible'), 20000);
       }
     }
+  }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
   window.addEventListener('load', showIOSTipIfNeeded);
 })();
