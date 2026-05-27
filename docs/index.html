@@ -2713,7 +2713,8 @@ async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
       return this.state.notifUnread || 0;
     },
     async markNotificationRead(id){
-      await sb.from('notifications').update({ is_read: true }).eq('id', id);
+      const { error } = await sb.from('notifications').update({ is_read: true }).eq('id', id);
+      if (error) { console.warn('markNotificationRead error:', error); return; }
       const n = this.state.notifications.find(x => x.id === id);
       if (n && !n.read){ n.read = true; this.state.notifUnread = Math.max(0, this.state.notifUnread - 1); }
       updateNotificationBadge();
@@ -3425,10 +3426,10 @@ async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
     const markBtn = document.getElementById('markAllNotifRead');
     if (markBtn) markBtn.onclick = () => App.markAllNotificationsRead();
     dd.querySelectorAll('.notif-item').forEach(el => {
-      el.onclick = () => {
+      el.onclick = async () => {
         const nid = el.dataset.nid;
         const link = el.dataset.nlink;
-        if (nid) App.markNotificationRead(nid);
+        if (nid) await App.markNotificationRead(nid);
         dd.classList.remove('open');
         if (link) navigate(link);
       };
