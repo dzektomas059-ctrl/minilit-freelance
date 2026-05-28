@@ -20,7 +20,11 @@ begin
   end loop;
 end $$;
 
--- public reads
+-- public read profiles (non-sensitive fields only via view)
+create view public_profiles as
+select id, name, role, bio, avatar_url, cover_url, specialization, rating, reviews_count,
+       orders_done, orders_total, last_seen, notif_prefs, created_at
+from profiles;
 create policy "public read profiles" on profiles for select using (true);
 create policy "public read jobs"     on jobs     for select using (true);
 create policy "public read services" on services for select using (true);
@@ -34,6 +38,7 @@ create policy "own update profile"  on profiles for update using (auth.uid() = i
     and (is_admin is not distinct from (select is_admin from profiles where id = id))
     and (banned is not distinct from (select banned from profiles where id = id))
     and (balance is not distinct from (select balance from profiles where id = id))
+    and (connects_remaining is not distinct from (select connects_remaining from profiles where id = id))
   );
 
 -- jobs: client owns
@@ -73,7 +78,14 @@ create policy "members read messages" on messages for select
     union
     select freelancer_id from chats where id = chat_id
   ));
-create policy "sender insert message" on messages for insert with check (auth.uid() = sender_id);
+create policy "sender insert message" on messages for insert with check (
+  auth.uid() = sender_id
+  and auth.uid() in (
+    select client_id from chats where id = chat_id
+    union
+    select freelancer_id from chats where id = chat_id
+  )
+);
 create policy "members update message status" on messages for update
   using (auth.uid() in (
     select client_id from chats where id = chat_id
@@ -103,7 +115,7 @@ create policy "notifications: update own" on notifications
   with check (auth.uid() = user_id);
 
 create policy "notifications: insert service" on notifications
-  for insert with check (true);
+  for insert with check (auth.uid() = user_id);
 
 -- portfolio: owner manages; public reads
 alter table portfolio enable row level security;

@@ -10,22 +10,35 @@
 --        supabase secrets set SMTP_USER=your@email.com
 --        supabase secrets set SMTP_PASS=your-app-password
 --        supabase secrets set SMTP_FROM=your@email.com
---        supabase secrets set WEBHOOK_SECRET=random-secret-string
---   4. Set the function URL and secret in this file below.
+--        supabase secrets set WEBHOOK_SECRET=<random-secret-string>
+--        supabase secrets set PROJECT_REF=<your-project-ref>
+--   4. Run: select set_config('app.settings.site_url', 'https://yourdomain.com', false);
 -- ============================================================
 
--- !! CONFIGURE ME !!
--- Replace the values below with your actual Supabase project ref and secret:
+-- Safe HTML escape helper
+create or replace function public.esc_html(s text) returns text
+language sql immutable as $$
+  select replace(replace(replace(replace(s, '&', '&amp;'), '<', '&lt;'), '>', '&gt;'), '"', '&quot;');
+$$;
+
 CREATE OR REPLACE FUNCTION public.notify_email(to_email text, subject text, html_body text)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  func_url text := 'https://<project-ref>.supabase.co/functions/v1/send-email';
-  secret   text := 'random-secret-string';
+  func_url text;
+  secret   text;
   resp     jsonb;
 BEGIN
+  BEGIN
+    func_url := 'https://' || secrets.get('PROJECT_REF') || '.supabase.co/functions/v1/send-email';
+    secret   := secrets.get('WEBHOOK_SECRET');
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'notify_email: secrets not configured, skipping';
+    RETURN;
+  END;
+
   SELECT content::jsonb INTO resp
   FROM net.http_post(
     url    := func_url,
@@ -39,7 +52,6 @@ BEGIN
       'html',    html_body
     )
   );
-  -- Log error silently — don't block the trigger
   IF resp ? 'error' THEN
     RAISE WARNING 'notify_email failed: %', resp->>'error';
   END IF;
@@ -69,8 +81,8 @@ BEGIN
     freelancer_email,
     'Новый заказ на MiniLIT',
     '<h2>Новый заказ</h2>' ||
-    '<p>Клиент <strong>' || COALESCE(customer_name, 'Пользователь') || '</strong> ' ||
-    'оформил заказ <strong>' || COALESCE(NEW.title, '—') || '</strong>.</p>' ||
+    '<p>Клиент <strong>' || public.esc_html(COALESCE(customer_name, 'Пользователь')) || '</strong> ' ||
+    'оформил заказ <strong>' || public.esc_html(COALESCE(NEW.title, '—')) || '</strong>.</p>' ||
     '<p><a href="' || COALESCE(current_setting('app.settings.site_url', true), '') || '#order/' || NEW.id || '">Открыть заказ</a></p>'
   );
   RETURN NEW;
@@ -114,8 +126,8 @@ BEGIN
     PERFORM public.notify_email(
       customer_email,
       'Статус заказа изменён — MiniLIT',
-      '<h2>Статус заказа: ' || status_label || '</h2>' ||
-      '<p>Статус вашего заказа <strong>#' || NEW.id || '</strong> изменён на "' || status_label || '".</p>' ||
+      '<h2>Статус заказа: ' || public.esc_html(status_label) || '</h2>' ||
+      '<p>Статус вашего заказа <strong>#' || NEW.id || '</strong> изменён на "' || public.esc_html(status_label) || '".</p>' ||
       '<p><a href="' || COALESCE(current_setting('app.settings.site_url', true), '') || '#order/' || NEW.id || '">Открыть заказ</a></p>'
     );
   END IF;
@@ -124,8 +136,8 @@ BEGIN
     PERFORM public.notify_email(
       freelancer_email,
       'Статус заказа изменён — MiniLIT',
-      '<h2>Статус заказа: ' || status_label || '</h2>' ||
-      '<p>Статус заказа <strong>#' || NEW.id || '</strong> изменён на "' || status_label || '".</p>' ||
+      '<h2>Статус заказа: ' || public.esc_html(status_label) || '</h2>' ||
+      '<p>Статус заказа <strong>#' || NEW.id || '</strong> изменён на "' || public.esc_html(status_label) || '".</p>' ||
       '<p><a href="' || COALESCE(current_setting('app.settings.site_url', true), '') || '#order/' || NEW.id || '">Перейти к заказу</a></p>'
     );
   END IF;
@@ -174,8 +186,8 @@ BEGIN
     recipient_email,
     'Новое сообщение на MiniLIT',
     '<h2>Новое сообщение</h2>' ||
-    '<p><strong>' || COALESCE(sender_name, 'Пользователь') || '</strong>:</p>' ||
-    '<blockquote>' || LEFT(NEW.text, 200) || '</blockquote>' ||
+    '<p><strong>' || public.esc_html(COALESCE(sender_name, 'Пользователь')) || '</strong>:</p>' ||
+    '<blockquote>' || public.esc_html(LEFT(NEW.text, 200)) || '</blockquote>' ||
     CASE WHEN chat_order_id IS NOT NULL
       THEN '<p><a href="' || COALESCE(current_setting('app.settings.site_url', true), '') || '#order/' || chat_order_id || '">Перейти к чату</a></p>'
       ELSE ''
@@ -196,5 +208,5 @@ CREATE TRIGGER on_message_insert
 DO $$
 BEGIN
   PERFORM set_config('app.settings.site_url',
-    'https://<your-domain>.vercel.app/', true);
+    COALESCE(current_setting('app.settings.site_url', true), 'https://dzektomas059-ctrl.github.io/minilit-freelance/'), true);
 END $$;

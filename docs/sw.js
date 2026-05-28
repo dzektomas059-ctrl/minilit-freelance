@@ -29,3 +29,21 @@ self.addEventListener('fetch', e => {
     );
   }
 });
+/* ----- push notifications ----- */
+self.addEventListener('push', e => {
+  let data;
+  try { data = e.data ? e.data.json() : {}; } catch(_) { data = { title: 'MiniLIT', body: e.data?.text() || '' }; }
+  const title = data.title || 'MiniLIT';
+  const opts = {
+    body: data.body || '',
+    icon: data.icon || '/minilit-freelance/icons/icon-192.png',
+    badge: '/minilit-freelance/icons/icon-192.png',
+    data: { url: data.url || '/' },
+  };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = e.notification.data?.url || '/minilit-freelance/';
+  e.waitUntil(clients.openWindow(url));
+});

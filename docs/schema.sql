@@ -28,6 +28,7 @@ create table profiles (
   last_seen timestamptz default now(),
   balance int not null default 0,
   is_admin boolean not null default false,
+  notif_prefs jsonb default '{"order":true,"proposal":true,"message":true,"review":true,"system":true}'::jsonb,
   banned boolean not null default false,
   created_at timestamptz default now()
 );
@@ -312,19 +313,22 @@ begin
 end;
 $$;
 
--- atomic credit freelancer on order completion
+-- atomic credit freelancer on order completion (admin only)
 create or replace function public.credit_freelancer(p_user_id uuid, p_amount int)
 returns boolean
 language plpgsql security definer
 as $$
 begin
+  if not public.is_admin() then
+    raise exception 'Доступ только администратору';
+  end if;
   update profiles set balance = balance + p_amount
   where id = p_user_id;
   return found;
 end;
 $$;
 
--- Escrow: pay from client balance to escrow
+-- Escrow: pay from client balance to escrow (client or admin only)
 create or replace function public.escrow_pay(p_order_id uuid)
 returns boolean
 language plpgsql security definer
@@ -336,6 +340,9 @@ begin
   select * into v_order from orders where id = p_order_id;
   if not found then raise exception 'Order not found'; end if;
   if v_order.status != 'pending_payment' then raise exception 'Order is not pending_payment'; end if;
+  if auth.uid() != v_order.client_id and not public.is_admin() then
+    raise exception 'Only the client or admin can pay';
+  end if;
 
   select balance into v_client_balance from profiles where id = v_order.client_id;
   if v_client_balance < v_order.price then raise exception 'Insufficient balance'; end if;
@@ -354,7 +361,7 @@ begin
 end;
 $$;
 
--- Escrow: refund to client on cancellation
+-- Escrow: refund to client on cancellation (client or admin only)
 create or replace function public.escrow_refund(p_order_id uuid)
 returns boolean
 language plpgsql security definer
@@ -366,6 +373,9 @@ begin
   if not found then raise exception 'Order not found'; end if;
   if v_order.escrow_amount is null or v_order.escrow_amount = 0 then
     raise exception 'No escrow to refund';
+  end if;
+  if auth.uid() != v_order.client_id and not public.is_admin() then
+    raise exception 'Only the client or admin can refund';
   end if;
 
   update profiles set balance = balance + v_order.escrow_amount where id = v_order.client_id;
@@ -467,6 +477,26 @@ drop trigger if exists trg_order_state on orders;
 create trigger trg_order_state
   before update of status on orders
   for each row execute function public.check_order_transition();
+
+-- auto-release escrow on completion or cancellation
+create or replace function public.auto_escrow_release() returns trigger
+language plpgsql security definer as $$
+begin
+  if new.status = 'completed' and old.status != 'completed' and new.escrow_amount > 0 then
+    update profiles set balance = balance + new.escrow_amount where id = new.freelancer_id;
+    update orders set escrow_amount = 0 where id = new.id;
+  end if;
+  if new.status = 'cancelled' and old.status != 'cancelled' and new.escrow_amount > 0 then
+    update profiles set balance = balance + new.escrow_amount where id = new.client_id;
+    update orders set escrow_amount = 0 where id = new.id;
+  end if;
+  return null;
+end;
+$$;
+drop trigger if exists trg_escrow_release on orders;
+create trigger trg_escrow_release
+  after update of status on orders
+  for each row execute function public.auto_escrow_release();
 
 -- prevent duplicate active orders
 create unique index if not exists orders_active_unique on orders (service_id, client_id)

@@ -46,6 +46,8 @@ body{
 }
 a{color:#1DBF73;text-decoration:none}
 a:hover{text-decoration:underline}
+.skip-link:focus{left:0;top:0;outline:none}
+.skip-link:focus-visible{left:0;top:0}
 button{font-family:inherit;cursor:pointer}
 input,textarea,select{font-family:inherit;font-size:14px}
 img{max-width:100%;display:block}
@@ -100,7 +102,10 @@ img{max-width:100%;display:block}
 .btn-ghost{background:transparent;color:var(--gray);border:none;padding:8px 12px;font-weight:500}
 .btn-ghost:hover{color:#1f2937}
 .btn-sm{padding:6px 12px;font-size:13px}
-.btn-lg{padding:11px 22px;font-size:15px}
+.btn-lg{padding:11px 22px;font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:10px;justify-content:center}
+.btn-lg:disabled{opacity:.55;cursor:not-allowed}
+.btn-lg.is-loading{cursor:progress}
+.btn-lg.is-loading .offer-spinner{display:inline-block}
 .btn-block{width:100%}
 .btn-own-task{background:#e5e7eb;color:#6b7280;border:1px solid #d1d5db;border-radius:6px;padding:8px 16px;font-weight:500;font-size:14px;cursor:not-allowed;opacity:.95}
 .btn-own-task:hover{background:#e5e7eb}
@@ -231,6 +236,19 @@ img{max-width:100%;display:block}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--line)}
 /* metric tiles — hardcoded across all themes for maximum contrast */
 .metric-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.notif-settings{display:flex;flex-wrap:wrap;gap:10px}
+.notif-toggle{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 12px;border-radius:8px;background:var(--bg2,#f3f4f6);transition:background .2s}
+.notif-toggle:hover{background:var(--green-l)}
+.notif-toggle input[type=checkbox]{width:16px;height:16px;accent-color:var(--green);cursor:pointer}
+/* onboarding tutorial */
+.onboarding-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);animation:fadeIn .3s ease}
+.onboarding-card{background:var(--card-bg,#fff);border-radius:16px;padding:32px;max-width:440px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,.3);text-align:center;animation:popIn .35s cubic-bezier(.16,1,.3,1)}
+.onboarding-card .step-dots{display:flex;justify-content:center;gap:8px;margin:16px 0}
+.onboarding-card .step-dot{width:8px;height:8px;border-radius:50%;background:var(--line,#d1d5db);transition:background .2s}
+.onboarding-card .step-dot.active{background:var(--green);width:24px;border-radius:4px}
+.onboarding-card h2{margin:0 0 8px;font-size:20px}
+.onboarding-card p{margin:0 0 20px;color:var(--gray);font-size:14px;line-height:1.5}
+.onboarding-card .icon{font-size:48px;margin-bottom:12px}
 .tile{background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:18px}
 .tile .label{font-family:'Inter',system-ui,sans-serif;font-weight:600;font-size:13px;color:#000!important;letter-spacing:-.1px;text-transform:uppercase}
 .tile .value{font-family:'Inter',system-ui,sans-serif;font-size:2.2rem;font-weight:800;margin-top:4px;color:#000!important;letter-spacing:-.5px;line-height:1.1}
@@ -287,7 +305,7 @@ img{max-width:100%;display:block}
 .chat-body{flex:1;overflow-y:auto;padding:18px;background:var(--bg);display:flex;flex-direction:column;gap:10px;min-height:380px;max-height:560px}
 .bubble{max-width:62%;padding:10px 12px;border-radius:12px;font-size:14px;line-height:1.4;word-wrap:break-word}
 .bubble.in{background:#fff;border:1px solid var(--line);align-self:flex-start;border-top-left-radius:4px}
-.bubble.out{background:var(--green);color:#000;align-self:flex-end;border-top-right-radius:4px}
+.bubble.out{background:var(--green);color:#111;align-self:flex-end;border-top-right-radius:4px}
 .bubble .time{font-size:10px;opacity:.65;display:block;margin-top:4px}
 /* custom scrollbar */
 ::-webkit-scrollbar{width:6px;height:6px}
@@ -549,11 +567,6 @@ body.is-offer .category-bar-scroll{width:auto;max-width:1100px;padding:0 20px;fl
 .offer-progress-bar{height:8px;background:#eef2f7;border-radius:99px;overflow:hidden}
 .offer-progress-fill{height:100%;background:linear-gradient(90deg,var(--green) 0%,#3dd989 100%);width:0%;transition:width .25s ease;border-radius:99px}
 .offer-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap}
-.btn-lg{height:48px;padding:0 22px;font-size:15px;font-weight:600;border-radius:10px;
-  display:inline-flex;align-items:center;gap:10px;justify-content:center;}
-.btn-lg:disabled{opacity:.55;cursor:not-allowed}
-.btn-lg.is-loading{cursor:progress}
-.btn-lg.is-loading .offer-spinner{display:inline-block}
 .offer-spinner{
   display:none;width:16px;height:16px;border-radius:50%;
   border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
@@ -885,7 +898,6 @@ html{scroll-behavior:smooth}
 .custom-notif .cn-text{font-size:13px;color:#999;margin-top:4px;line-height:1.4}
 .custom-notif .cn-close{background:none;border:none;color:#666;font-size:20px;cursor:pointer;padding:0;line-height:1}
 .custom-notif .cn-close:hover{color:#fff}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
 /* form field error animation */
 .field-err{font-size:12px;color:#ef4444;margin-top:4px;opacity:0;transform:translateY(-6px);transition:all .25s ease}
@@ -1179,7 +1191,7 @@ html{scroll-behavior:smooth}
   }
   .hero .deco,.hero .deco2{display:none}
   /* — Stats — */
-  .metric-tiles{grid-template-columns:repeat(2,1fr);gap:10px}
+  .metric-tiles,.stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
   .tile{padding:14px 12px}
   .tile .value{font-size:26px}
   .tile .label{font-size:12px}
@@ -1287,7 +1299,7 @@ html{scroll-behavior:smooth}
   .container{padding:12px 10px 80px}
   .hero{padding:18px 14px}
   .hero h1{font-size:clamp(18px,7vw,22px)}
-  .balance-widget .amount{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .balance-widget .amount{font-size:13px;font-variant-numeric:tabular-nums}
   .nav-chat span:first-child{display:none}   /* hide "Чат" text, keep counter */
   .topbar-inner .balance-widget .cur{display:none}
 }
@@ -1464,6 +1476,7 @@ html{scroll-behavior:smooth}
 </script>
 </head>
 <body>
+<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;z-index:9999;background:#1DBF73;color:#fff;padding:8px 16px;border-radius:0 0 6px 0;font-size:14px;font-weight:600;text-decoration:none">Перейти к содержанию</a>
 <header class="topbar">
   <div class="topbar-inner">
     <a class="logo" href="#home" data-link>
@@ -1517,7 +1530,7 @@ html{scroll-behavior:smooth}
     <a href="#services?cat=boost" class="category-link" data-link>Буст и Услуги</a>
   </div>
 </div>
-<main id="app"></main>
+<main id="app" id="main-content"></main>
 <footer>
   <div class="foot">
     <div>
@@ -1669,6 +1682,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
     isAdmin: !!p.is_admin,
     banned: !!p.banned,
     lastSeen: p.last_seen ? Date.parse(p.last_seen) : 0,
+    notifPrefs: p.notif_prefs || {order:true,proposal:true,message:true,review:true,system:true},
     createdAt: p.created_at ? Date.parse(p.created_at) : 0,
   });
   const fromJob = j => j && ({
@@ -2127,7 +2141,7 @@ const fromOrder = o => o && ({
     },
     async fetchAll(){
             const [p, j, s, a, o, c, m, r, pr, pf, nn, bk, tp] = await Promise.all([
-        sb.from('profiles').select('*'),
+        sb.from('public_profiles').select('*'),
         sb.from('jobs').select('*').order('created_at', { ascending: false }),
         sb.from('services').select('*').order('created_at', { ascending: false }),
         sb.from('applications').select('*').order('created_at', { ascending: false }),
@@ -2157,7 +2171,6 @@ const fromOrder = o => o && ({
       this._tavernProjects = (tp?.data||[]).map(fromTavernProject);
       if (pf.error) console.warn('portfolio table error:', pf.error.message);
     },
-    save(){ /* no-op: server is source of truth */ },
     /* ===== auth ===== */
     me(){
       if (!this.state.session) return null;
@@ -2426,25 +2439,7 @@ async setOrderStatus(id, status, paymentProof, disputeReason){
         if (error) return false;
         const order = fromOrder(data);
         upsertById(this.state.orders, order);
-        // Эскроу: при завершении — зачислить фрилансеру из escrow
-        if (status === 'completed' && oldOrder.escrowAmount > 0){
-          await sb.rpc('credit_freelancer', {
-            p_user_id: oldOrder.freelancerId,
-            p_amount: oldOrder.escrowAmount,
-          });
-          const freelancer = this.user(oldOrder.freelancerId);
-          if (freelancer) freelancer.balance = (freelancer.balance||0) + oldOrder.escrowAmount;
-          // Обнуляем escrow_amount в заказе
-          await sb.from('orders').update({ escrow_amount: 0 }).eq('id', id);
-        }
-        // Эскроу: при отмене — вернуть заказчику
-        if (status === 'cancelled' && oldOrder.escrowAmount > 0){
-          await sb.rpc('escrow_refund', { p_order_id: id });
-          const client = this.user(oldOrder.clientId);
-          if (client) client.balance = (client.balance||0) + oldOrder.escrowAmount;
-          // Обновляем баланс заказчика локально
-          if (me.id === oldOrder.clientId) me.balance = (me.balance||0) + oldOrder.escrowAmount;
-        }
+        // Эскроу: автовыплата/возврат обрабатывается триггером в БД
         const otherId = order.clientId === me.id ? order.freelancerId : order.clientId;
         const statusLabels = {
           pending_payment:'Ожидает оплаты', paid:'Оплачено (эскроу)',
@@ -2653,34 +2648,22 @@ async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
       upsertById(this.state.users, me);
       return me;
     },
-        async uploadAvatar(file){
-      await ensureBucket('avatars');
+        async uploadFile(bucket, profileField, file){
+      await ensureBucket(bucket);
       const me = this.me(); if (!me) throw new Error('Войдите в аккаунт');
       const ext = (file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
       const path = `${me.id}/${Date.now()}.${ext}`;
-            const { error: upErr } = await sb.storage.from('avatars').upload(path, file, {
+      const { error: upErr } = await sb.storage.from(bucket).upload(path, file, {
         upsert: true, cacheControl: '3600', contentType: file.type || undefined,
       });
       if (upErr) throw upErr;
-      const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
+      const { data: { publicUrl } } = sb.storage.from(bucket).getPublicUrl(path);
       const url = publicUrl + '?v=' + Date.now();
-      await this.updateProfile({ avatar_url: url });
+      await this.updateProfile({ [profileField]: url });
       return url;
     },
-        async uploadCover(file){
-      await ensureBucket('covers');
-      const me = this.me(); if (!me) throw new Error('Войдите в аккаунт');
-      const ext = (file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
-      const path = `${me.id}/${Date.now()}.${ext}`;
-            const { error: upErr } = await sb.storage.from('covers').upload(path, file, {
-        upsert: true, cacheControl: '3600', contentType: file.type || undefined,
-      });
-      if (upErr) throw upErr;
-      const { data: { publicUrl } } = sb.storage.from('covers').getPublicUrl(path);
-      const url = publicUrl + '?v=' + Date.now();
-      await this.updateProfile({ cover_url: url });
-      return url;
-    },
+        async uploadAvatar(file){ return this.uploadFile('avatars', 'avatar_url', file); },
+        async uploadCover(file){ return this.uploadFile('covers', 'cover_url', file); },
     async addPortfolio({ title, description, image_url, project_url }){
       const me = this.me(); if (!me) throw new Error('Войдите в аккаунт');
       const { data, error } = await sb.from('portfolio')
@@ -2719,6 +2702,8 @@ async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
     /* ===== notifications ===== */
     async createNotification(userId, type, title, body, data, link){
       try {
+        const user = this.state.users.find(u => u.id === userId);
+        if (user && user.notifPrefs && user.notifPrefs[type] === false) return;
         const { error } = await sb.from('notifications').insert([{
           user_id: userId, type, title, body,
           data: data || null,
@@ -3564,11 +3549,15 @@ async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
     const bg = root.firstElementChild;
     bg.addEventListener('click', e => { if (e.target === bg) closeModal(); });
     document.addEventListener('keydown', escClose);
-    // On mobile (bottom-sheet styling), let the user swipe the modal down to close.
+    // Focus trap
     const modal = bg.querySelector('.modal');
+    if (modal) trapFocus(modal);
+    // On mobile (bottom-sheet styling), let the user swipe the modal down to close.
     if (modal && window.matchMedia('(max-width: 900px)').matches) {
       enableSheetDragDismiss(modal);
     }
+    // Autofocus first input or close button
+    setTimeout(() => { (modal?.querySelector('input,textarea,select,button,[tabindex]') || modal)?.focus(); }, 50);
     document.body.classList.add('modal-open');
     return bg;
   }
@@ -3578,6 +3567,17 @@ async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
     document.body.classList.remove('modal-open');
   }
   function escClose(e){ if (e.key === 'Escape') closeModal(); }
+  function trapFocus(container){
+    const focusable = 'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    container.addEventListener('keydown', e => {
+      if (e.key !== 'Tab') return;
+      const els = [...container.querySelectorAll(focusable)].filter(el => el.offsetParent !== null);
+      if (!els.length) return;
+      const first = els[0], last = els[els.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+  }
   /* Swipe-down to dismiss for bottom-sheet modal on touch devices. */
   function enableSheetDragDismiss(el){
     let startY = 0, dy = 0, dragging = false;
@@ -4118,6 +4118,15 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
       </div>
     `);
     bindAuthCommon();
+    // Add skip link to role prompt
+    const modalBody = $('#modalRoot .modal');
+    if (modalBody) {
+      const skip = document.createElement('div');
+      skip.style.cssText = 'text-align:center;margin-top:12px';
+      skip.innerHTML = '<button class="btn-ghost btn-sm" id="skipRolePrompt" style="font-size:12px">Пропустить</button>';
+      modalBody.appendChild(skip);
+      skip.querySelector('#skipRolePrompt').addEventListener('click', () => { closeModal(); setTimeout(showOnboarding, 400); });
+    }
     $('#modalRoot').addEventListener('click', async e => {
       const opt = e.target.closest('.role-option');
       if (!opt) return;
@@ -4132,10 +4141,81 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
         closeModal();
         toast('Роль выбрана! Теперь можете начать работу.','success');
         render();
+        setTimeout(showOnboarding, 600);
       } catch(err){
                 toast('Ошибка: ' + (err.message || 'не удалось сохранить роль'),'error');
       }
     }, { once: true });
+  }
+  /* ---------- onboarding tutorial ---------- */
+  const ONBOARDING_STEPS = [
+    {icon:'🚀',title:'Добро пожаловать в MiniLIT!',body:'Это фриланс-биржа, где заказчики находят исполнителей, а фрилансеры — заказы. Проведём короткую экскурсию.'},
+    {icon:'👤',title:'Заполните профиль',body:'Добавьте аватар, описание и специализацию. Хороший профиль привлекает больше заказчиков.'},
+    {icon:'📋',title:'Задания и услуги',body:'Заказчики создают задания, фрилансеры на них откликаются. Также можно продавать готовые услуги с фиксированной ценой.'},
+    {icon:'💬',title:'Чат и Safe Deal',body:'Обсуждайте детали в чате. Оплачивайте через Safe Deal — деньги в эскроу до завершения заказа.'},
+    {icon:'🎯',title:'Ежедневные квесты',body:'Выполняйте квесты (actions) каждый день и зарабатывайте бонусные коннекты для откликов.'},
+  ];
+  function showOnboarding(){
+    if (localStorage.getItem('onboarding_done')) return;
+    let step = 0;
+    function renderStep(){
+      const s = ONBOARDING_STEPS[step];
+      const overlay = document.createElement('div');
+      overlay.className = 'onboarding-overlay';
+      overlay.innerHTML = `
+        <div class="onboarding-card">
+          <div class="icon">${s.icon}</div>
+          <h2>${s.title}</h2>
+          <p>${s.body}</p>
+          <div class="step-dots">${ONBOARDING_STEPS.map((_,i) => `<span class="step-dot${i===step?' active':''}"></span>`).join('')}</div>
+          <div class="row" style="justify-content:center;gap:10px">
+            ${step > 0 ? '<button class="btn-outline btn-sm" id="obPrev">← Назад</button>' : ''}
+            ${step < ONBOARDING_STEPS.length-1
+              ? '<button class="btn-primary btn-sm" id="obNext">Далее →</button>'
+              : '<button class="btn-primary btn-sm" id="obDone">Готово!</button>'}
+          </div>
+          <button class="btn-ghost btn-sm" id="obSkip" style="margin-top:8px;font-size:12px">Пропустить</button>
+        </div>`;
+      document.body.appendChild(overlay);
+      const card = overlay.querySelector('.onboarding-card');
+      if (card) trapFocus(card);
+      setTimeout(() => card?.querySelector('button')?.focus(), 50);
+      overlay.querySelector('#obNext')?.addEventListener('click', () => { overlay.remove(); step++; renderStep(); });
+      overlay.querySelector('#obPrev')?.addEventListener('click', () => { overlay.remove(); step--; renderStep(); });
+      overlay.querySelector('#obDone')?.addEventListener('click', () => { overlay.remove(); localStorage.setItem('onboarding_done','1'); });
+      overlay.querySelector('#obSkip')?.addEventListener('click', () => { overlay.remove(); localStorage.setItem('onboarding_done','1'); });
+    }
+    renderStep();
+  }
+  // VAPID public key — замените на свой из Supabase Dashboard → Project Settings → Push Notifications
+  const VAPID_PUBLIC_KEY = '';
+  async function subscribePush(){
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+    if (!VAPID_PUBLIC_KEY) return false;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+      localStorage.setItem('push_sub', JSON.stringify(sub));
+      return true;
+    } catch(e){ console.warn('Push subscribe error:', e); return false; }
+  }
+  async function unsubscribePush(){
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+      localStorage.removeItem('push_sub');
+    } catch(_){}
+  }
+  function urlBase64ToUint8Array(base64){
+    const padding = '='.repeat((4 - base64.length % 4) % 4);
+    const b64 = (base64 + padding).replace(/-/g,'+').replace(/_/g,'/');
+    const raw = atob(b64);
+    return Uint8Array.from(raw, c => c.charCodeAt(0));
   }
   function bindAuthCommon(){
     const root = $('#modalRoot');
@@ -5009,7 +5089,22 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
         <div class="tile"><div class="label">Заказов</div><div class="value">${m.ordersTotal}</div></div>
         <div class="tile"><div class="label">Выполнено</div><div class="value">${m.ordersDone}</div></div>
         <div class="tile"><div class="label">% выполненных</div><div class="value">${m.completionRate}%</div></div>
-        <div class="tile"><div class="label">Средний рейтинг</div><div class="value">${m.ratingAvg||'—'} ★</div></div>
+        <div class="tile"><div class="label">Средний рейтинг</div>        <div class="value">${m.ratingAvg||'—'} ★</div></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header" style="font-weight:600;margin-bottom:10px">🔔 Настройки уведомлений</div>
+        <div class="notif-settings" id="notifSettings">
+          ${['order','proposal','message','review','system'].map(t => `
+            <label class="notif-toggle">
+              <input type="checkbox" data-ntype="${t}" ${me.notifPrefs[t]!==false?'checked':''}>
+              <span>${({order:'Заказы',proposal:'Отклики',message:'Сообщения',review:'Отзывы',system:'Системные'})[t]||t}</span>
+            </label>
+          `).join('')}
+          <label class="notif-toggle">
+            <input type="checkbox" id="pushToggle" ${localStorage.getItem('push_sub')?'checked':''}>
+            <span>Push-уведомления</span>
+          </label>
+        </div>
       </div>
       <div class="card">
         <div class="tabs">
@@ -5397,7 +5492,7 @@ function meOrders(orders, me){
         </ul>
         <h3>Сделки и оплата</h3>
         <ul>
-          <li><b>Как платить за услугу?</b> Сейчас сделки оформляются на платформе, а оплата идёт напрямую — мы добавляем эскроу в следующих релизах.</li>
+          <li><b>Как платить за услугу?</b> После оформления заказа вы оплачиваете через Safe Deal — деньги замораживаются в эскроу и переводятся фрилансеру только после завершения заказа.</li>
           <li><b>Кто отвечает за качество работы?</b> Исполнитель — это его прямое обязательство по сделке.</li>
           <li><b>Что если не отвечает заказчик/фрилансер?</b> Напишите в поддержку — поможем разобраться.</li>
         </ul>
@@ -6244,7 +6339,7 @@ function viewAdminComplaints(){
             const ciPrev = document.querySelector('.chat-item.active .ci-prev');
             if (ciPrev) ciPrev.textContent = text.length > 50 ? text.slice(0,50) + '…' : text;
           }
-          maybeAutoReply(chatId, me.id);
+          // Chat realtime — вставка нового сообщения обрабатывается `_onMessage`
         });
         // Attach image button
         document.getElementById('chatAttachBtn')?.addEventListener('click', () => {
@@ -6427,6 +6522,27 @@ function viewAdminComplaints(){
           }
           render();
         } catch(e){ toast('Ошибка таймера','error'); }
+      });
+      // Notification settings toggles
+      $$('#notifSettings input[type=checkbox]').forEach(cb => cb.onchange = async () => {
+        if (cb.id === 'pushToggle') {
+          if (cb.checked) {
+            const ok = await subscribePush();
+            if (!ok) { cb.checked = false; toast('Push-уведомления недоступны (нужен VAPID ключ)','error'); }
+            else toast('Push-уведомления включены','success');
+          } else {
+            await unsubscribePush();
+            toast('Push-уведомления выключены','success');
+          }
+          return;
+        }
+        const me = App.me(); if (!me) return;
+        const type = cb.dataset.ntype;
+        const val = cb.checked;
+        me.notifPrefs = me.notifPrefs || {};
+        me.notifPrefs[type] = val;
+        await sb.from('profiles').update({ notif_prefs: me.notifPrefs }).eq('id', me.id);
+        toast('Настройка сохранена','success');
       });
       // Загружаем общее время для заказов
       (async () => {
@@ -7368,8 +7484,6 @@ async function openPaymentModal(orderId){
       toast('Ошибка: ' + (err.message||err),'error');
     }
   }
-  /* auto-reply disabled: real users now — messages приходят через realtime от собеседника */
-  function maybeAutoReply(){ /* no-op when on Supabase backend */ }
   /* ---------- theme picker (8 presets) ---------- */
   const THEME_KEYS = ['light','dark'];
     const THEME_META = {

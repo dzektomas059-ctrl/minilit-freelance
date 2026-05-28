@@ -56,6 +56,16 @@ BEGIN
     ALTER TABLE messages ADD COLUMN file_type text;
   END IF;
 END $$;
+-- 0c. Добавляем notif_prefs в profiles (настройки уведомлений)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'profiles' AND column_name = 'notif_prefs'
+  ) THEN
+    ALTER TABLE profiles ADD COLUMN notif_prefs jsonb default '{"order":true,"proposal":true,"message":true,"review":true,"system":true}'::jsonb;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_chats_client ON chats (client_id);
 CREATE INDEX IF NOT EXISTS idx_chats_freelancer ON chats (freelancer_id);
 
@@ -235,7 +245,7 @@ CREATE POLICY "notifications: update own" ON notifications
 
 DROP POLICY IF EXISTS "notifications: insert service" ON notifications;
 CREATE POLICY "notifications: insert service" ON notifications
-  FOR INSERT WITH CHECK (true);
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- ============================================================
 -- 10. Добавляем поля доставки и прочтения в messages
@@ -688,7 +698,7 @@ begin
 end;
 $$;
 
--- RPC: эскроу-оплата — списать с баланса заказчика, записать escrow_amount
+-- RPC: эскроу-оплата — списать с баланса заказчика, записать escrow_amount (клиент или админ)
 CREATE OR REPLACE FUNCTION public.escrow_pay(p_order_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql SECURITY DEFINER AS $$
@@ -699,6 +709,9 @@ begin
   select * into v_order from orders where id = p_order_id;
   if not found then raise exception 'Order not found'; end if;
   if v_order.status != 'pending_payment' then raise exception 'Order is not pending_payment'; end if;
+  if auth.uid() != v_order.client_id and not public.is_admin() then
+    raise exception 'Only the client or admin can pay';
+  end if;
 
   select balance into v_client_balance from profiles where id = v_order.client_id;
   if v_client_balance < v_order.price then raise exception 'Insufficient balance'; end if;
@@ -717,7 +730,7 @@ begin
 end;
 $$;
 
--- RPC: эскроу-возврат — вернуть заказчику при отмене
+-- RPC: эскроу-возврат — вернуть заказчику при отмене (клиент или админ)
 CREATE OR REPLACE FUNCTION public.escrow_refund(p_order_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql SECURITY DEFINER AS $$
@@ -729,6 +742,9 @@ begin
   if v_order.escrow_amount is null or v_order.escrow_amount = 0 then
     raise exception 'No escrow to refund';
   end if;
+  if auth.uid() != v_order.client_id and not public.is_admin() then
+    raise exception 'Only the client or admin can refund';
+  end if;
 
   update profiles set balance = balance + v_order.escrow_amount where id = v_order.client_id;
   update orders set
@@ -739,16 +755,45 @@ begin
 end;
 $$;
 
--- RPC: зачислить фрилансеру при завершении заказа
+-- RPC: зачислить фрилансеру при завершении заказа (только админ)
 CREATE OR REPLACE FUNCTION public.credit_freelancer(p_user_id uuid, p_amount int)
 RETURNS boolean
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 begin
+  if not public.is_admin() then
+    raise exception 'Доступ только администратору';
+  end if;
   update profiles set balance = balance + p_amount
   where id = p_user_id;
   return found;
 end;
 $$;
+
+-- Триггер: автовыплата escrow при завершении или возврат при отмене
+CREATE OR REPLACE FUNCTION public.auto_escrow_release() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+begin
+  if new.status = 'completed' and old.status != 'completed' and new.escrow_amount > 0 then
+    update profiles set balance = balance + new.escrow_amount where id = new.freelancer_id;
+    update orders set escrow_amount = 0 where id = new.id;
+  end if;
+  if new.status = 'cancelled' and old.status != 'cancelled' and new.escrow_amount > 0 then
+    update profiles set balance = balance + new.escrow_amount where id = new.client_id;
+    update orders set escrow_amount = 0 where id = new.id;
+  end if;
+  return null;
+end;
+$$;
+DROP TRIGGER IF EXISTS trg_escrow_release ON orders;
+CREATE TRIGGER trg_escrow_release
+  AFTER UPDATE OF status ON orders
+  FOR EACH ROW EXECUTE FUNCTION public.auto_escrow_release();
+
+-- Публичное view для профилей (без sensitive полей)
+CREATE OR REPLACE VIEW public_profiles AS
+SELECT id, name, role, bio, avatar_url, cover_url, specialization, rating, reviews_count,
+       orders_done, orders_total, last_seen, notif_prefs, created_at
+FROM profiles;
 
 -- Добавляем orders в realtime
 DO $$
@@ -790,3 +835,40 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE time_entries;
   END IF;
 END $$;
+
+-- ============================================================
+-- 25. Исправления безопасности (v2)
+-- ============================================================
+
+-- Защищаем connects_remaining в own update profile (если политика существует)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'own update profile' AND tablename = 'profiles') THEN
+    DROP POLICY IF EXISTS "own update profile" ON profiles;
+    CREATE POLICY "own update profile" ON profiles FOR UPDATE USING (auth.uid() = id)
+      WITH CHECK (
+        auth.uid() = id
+        AND (is_admin is not distinct from (select is_admin from profiles where id = id))
+        AND (banned is not distinct from (select banned from profiles where id = id))
+        AND (balance is not distinct from (select balance from profiles where id = id))
+        AND (connects_remaining is not distinct from (select connects_remaining from profiles where id = id))
+      );
+  END IF;
+END $$;
+
+-- Исправляем политику messages insert — проверяем членство в чате
+DROP POLICY IF EXISTS "sender insert message" ON messages;
+CREATE POLICY "sender insert message" ON messages FOR INSERT WITH CHECK (
+  auth.uid() = sender_id
+  AND auth.uid() IN (
+    SELECT client_id FROM chats WHERE id = chat_id
+    UNION
+    SELECT freelancer_id FROM chats WHERE id = chat_id
+  )
+);
+
+-- Safe HTML escape helper (для email_triggers)
+CREATE OR REPLACE FUNCTION public.esc_html(s text) RETURNS text
+LANGUAGE sql IMMUTABLE AS $$
+  SELECT replace(replace(replace(replace(s, '&', '&amp;'), '<', '&lt;'), '>', '&gt;'), '"', '&quot;');
+$$;
