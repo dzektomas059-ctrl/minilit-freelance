@@ -1,0 +1,27 @@
+{
+  "name": "MiniLIT — Фриланс-маркетплейс",
+  "short_name": "MiniLIT",
+  "description": "Биржа заданий и магазин услуг. Заказчики находят исполнителей за пару кликов, фрилансеры получают стабильный поток заказов.",
+  "start_url": "/minilit-freelance/",
+  "scope": "/minilit-freelance/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#1DBF73",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "ru",
+  "dir": "ltr",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "shortcuts": [
+    { "name": "Биржа", "short_name": "Биржа", "url": "/minilit-freelance/#exchange", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Таверна", "short_name": "Таверна", "url": "/minilit-freelance/#tavern", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Сообщения", "short_name": "Чат", "url": "/minilit-freelance/#messages", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
