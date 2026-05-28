@@ -2067,7 +2067,7 @@ const fromOrder = o => o && ({
         const { data:{ session } } = await sb.auth.getSession();
         this.state.session = session?.user?.id || null;
         await this.fetchAll();
-        if (this.state.session && !this.state.users.find(u => u.id === this.state.session)){
+        if (this.state.session){
           await this.ensureProfile();
         }
         this.subscribeRealtime();
@@ -2083,7 +2083,7 @@ const fromOrder = o => o && ({
           if (newId !== this.state.session){
             this.state.session = newId;
             await this.fetchAll();
-            if (newId && !this.state.users.find(u => u.id === newId)){
+            if (newId){
               await this.ensureProfile();
             }
             await this.subscribeRealtime();
@@ -2092,10 +2092,12 @@ const fromOrder = o => o && ({
             if (newId){
               this.touchOnline();
               /* post-OAuth role prompt for first-time Google users */
-              if (event === 'SIGNED_IN'){
+              if (event === 'SIGNED_IN' && !localStorage.getItem('role_prompt_done')){
                 const u = this.me();
                 if (u && (u.bio === null || u.bio === undefined || u.bio === '') && u.role === 'client'){
                   setTimeout(() => showRolePrompt(), 600);
+                } else {
+                  localStorage.setItem('role_prompt_done', '1');
                 }
               }
             }
@@ -2105,7 +2107,7 @@ const fromOrder = o => o && ({
           this.touchOnline();
           /* post-OAuth role prompt for first-time Google users (on initial page load) */
           const u = this.me();
-          if (u && (u.bio === null || u.bio === undefined || u.bio === '') && u.role === 'client'){
+          if (u && (u.bio === null || u.bio === undefined || u.bio === '') && u.role === 'client' && !localStorage.getItem('role_prompt_done')){
             setTimeout(() => showRolePrompt(), 600);
           }
         }
@@ -2121,7 +2123,16 @@ const fromOrder = o => o && ({
     async ensureProfile(){
       const uid = this.state.session;
       if (!uid) return null;
-      let existing = this.state.users.find(u => u.id === uid);
+      const existing = this.state.users.find(u => u.id === uid);
+      // Always fetch full profile from profiles table for the current user
+      const { data, error } = await sb.from('profiles').select('*').eq('id', uid).maybeSingle();
+      if (!error && data) {
+        const p = fromProfile(data);
+        if (existing) Object.assign(existing, p);
+        else this.state.users.push(p);
+        return p;
+      }
+      // Fallback: if we already have cached data, return it
       if (existing) return existing;
       const authResp = await sb.auth.getUser();
       const user = authResp.data?.user;
@@ -2129,11 +2140,11 @@ const fromOrder = o => o && ({
       const meta = user.user_metadata || {};
       const email = user.email || '';
       const name = meta.name || meta.full_name || email.split('@')[0] || 'User';
-      const { data, error } = await sb.from('profiles').upsert({
+      const { data: d2, error: e2 } = await sb.from('profiles').upsert({
         id: uid, email, name, role: 'client'
       }).select().single();
-      if (!error && data) {
-        const p = fromProfile(data);
+      if (!e2 && d2) {
+        const p = fromProfile(d2);
         this.state.users.push(p);
         return p;
       }
@@ -2272,11 +2283,11 @@ const fromOrder = o => o && ({
       this.state.chats = [];
     },
     /* ===== entity accessors (cache) ===== */
-    user(id){ return this.state.users.find(u => u.id === id); },
-    task(id){ return this.state.tasks.find(t => t.id === id); },
-    service(id){ return this.state.services.find(s => s.id === id); },
-    order(id){ return this.state.orders.find(o => o.id === id); },
-    chat(id){ return this.state.chats.find(c => c.id === id); },
+    user(id){ return this.state.users.find(u => u.id === id) || null; },
+    task(id){ return this.state.tasks.find(t => t && t.id === id) || null; },
+    service(id){ return this.state.services.find(s => s && s.id === id) || null; },
+    order(id){ return this.state.orders.find(o => o && o.id === id) || null; },
+    chat(id){ return this.state.chats.find(c => c && c.id === id) || null; },
     /* ===== mutations ===== */
 async createTask({ title, description, category, budget }){
       const me = this.me(); if (!me) throw new Error('Войдите в аккаунт');
@@ -3627,7 +3638,7 @@ async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
   function render(){
     const { route, param, params } = parseHash();
     setActiveNav(route);
-    renderTopActions();
+    try { renderTopActions(); } catch(_){}
     document.body.classList.toggle('is-offer', route === 'offer');
     document.body.classList.toggle('in-chat', route === 'messages');
     document.body.classList.toggle('chat-open', route === 'messages' && !!params.chat);
@@ -3668,7 +3679,7 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
     app.classList.remove('app-enter');
     void app.offsetWidth;
     app.classList.add('app-enter');
-    bindAfterRender(route, param, params);
+    try { bindAfterRender(route, param, params); } catch(_){}
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
   function setActiveNav(route){
@@ -4125,7 +4136,7 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
       skip.style.cssText = 'text-align:center;margin-top:12px';
       skip.innerHTML = '<button class="btn-ghost btn-sm" id="skipRolePrompt" style="font-size:12px">Пропустить</button>';
       modalBody.appendChild(skip);
-      skip.querySelector('#skipRolePrompt').addEventListener('click', () => { closeModal(); setTimeout(showOnboarding, 400); });
+      skip.querySelector('#skipRolePrompt').addEventListener('click', () => { closeModal(); localStorage.setItem('role_prompt_done', '1'); setTimeout(showOnboarding, 400); });
     }
     $('#modalRoot').addEventListener('click', async e => {
       const opt = e.target.closest('.role-option');
@@ -4137,6 +4148,7 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
           await sb.from('profiles').update({ bio: 'Привет! Я фрилансер на MiniLIT.', specialization: 'Дизайн' }).eq('id', u.id);
         }
         u.role = role;
+        localStorage.setItem('role_prompt_done', '1');
         if (role === 'client') u.bio = u.bio || ' ';
         closeModal();
         toast('Роль выбрана! Теперь можете начать работу.','success');
@@ -5223,7 +5235,7 @@ function meOrders(orders, me){
         </div>
         <div class="right">
           <div class="price">${fmtMoney(t.budget)}</div>
-          <button class="btn-outline btn-sm" data-msg-user="${u.id}">Открыть чат</button>
+          ${u ? `<button class="btn-outline btn-sm" data-msg-user="${u.id}">Открыть чат</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -6537,7 +6549,7 @@ function viewAdminComplaints(){
           return;
         }
         const me = App.me(); if (!me) return;
-        const type = cb.dataset.ntype;
+        const type = cb.dataset.ntype; if (!type) return;
         const val = cb.checked;
         me.notifPrefs = me.notifPrefs || {};
         me.notifPrefs[type] = val;
