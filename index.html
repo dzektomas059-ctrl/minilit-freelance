@@ -112,7 +112,15 @@
 <div id="modalRoot"></div>
 <div id="toastWrap" class="toast-wrap"></div>
 
-<!-- Vite entry -->
-<script type="module" src="/src/main.js"></script>
+<!-- Supabase SDK -->
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+  window.sb = supabase.createClient(
+    'https://cloyutdjfyarifvhhkga.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsb3l1dGRqZnlhcmlmdmhoa2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTE2NTgsImV4cCI6MjA5NTAyNzY1OH0.Q6MP8tGXqZ-_tIVdPpLcf1Z7OHpBUbmtV0baqiCMknQ',
+    { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }, realtime: { params: { eventsPerSecond: 10 } } }
+  );
+</script>
+<script type="module" src="src/app.js"></script>
 </body>
 </html>

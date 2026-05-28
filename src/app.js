@@ -1,7 +1,7 @@
 import { API } from './api.js';
 import { store } from './store.js';
 import { Router } from './router.js';
-import { setLocale, getLocale, t } from './i18n.js';
+import { setLocale, getLocale, t, initI18n } from './i18n.js';
 import { viewProfile, bindProfile } from './views/profile.js';
 import { viewMessages, bindMessages } from './views/chat.js';
 import { viewAdmin, bindAdmin } from './views/admin.js';
@@ -134,6 +134,9 @@ router.onChange((route, params) => {
 // Initialize the app
 (async () => {
   try {
+    // Load i18n (JSON overrides on top of built-in fallbacks)
+    await initI18n();
+    
     // Boot Supabase session
     const session = await API.getSession();
     if (session?.user) {
