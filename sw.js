@@ -1,12 +1,14 @@
-const CACHE = 'minilit-v1';
+const CACHE = 'minilit-v2';
 const STATIC_URLS = [
   '/minilit-freelance/',
   '/minilit-freelance/index.html',
+  '/minilit-freelance/src/main.js',
   '/minilit-freelance/src/app.js',
   '/minilit-freelance/src/api.js',
   '/minilit-freelance/src/store.js',
   '/minilit-freelance/src/router.js',
   '/minilit-freelance/src/i18n.js',
+  '/minilit-freelance/src/styles.css',
   '/minilit-freelance/src/views/profile.js',
   '/minilit-freelance/src/views/chat.js',
   '/minilit-freelance/src/views/admin.js',
@@ -15,7 +17,9 @@ const STATIC_URLS = [
   '/minilit-freelance/icons/icon-512.png',
   '/minilit-freelance/icons/apple-touch-icon.png',
   '/minilit-freelance/icons/favicon.ico',
+  '/minilit-freelance/assets/',
 ];
+const API_HOSTS = ['supabase.co', 'api.resend.com'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -29,45 +33,68 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Cache First / Network Fallback
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
-  // Skip non-GET and Supabase API calls
-  if (event.request.method !== 'GET' || url.hostname.endsWith('supabase.co')) {
+  if (event.request.method !== 'GET') return;
+  
+  if (API_HOSTS.some(h => url.hostname.includes(h)) || url.pathname.includes('/rest/v1/')) {
+    event.respondWith(networkOnly(event.request));
     return;
   }
   
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        // Cache successful responses for static assets
-        if (response.ok && response.type === 'basic') {
-          const clone = response.clone();
-          caches.open(CACHE).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        // Offline fallback: return cached index.html for navigation
-        if (event.request.mode === 'navigate') {
-          return caches.match('/minilit-freelance/index.html');
-        }
-        return new Response('Offline', { status: 503 });
-      });
-    })
-  );
-});
-
-// Push notification handler
-self.addEventListener('push', event => {
-  let data;
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch (_) {
-    data = { title: 'MiniLIT', body: event.data?.text() || '' };
+  if (event.request.mode === 'navigate') {
+    event.respondWith(networkFirst(event.request));
+    return;
   }
   
+  event.respondWith(cacheFirst(event.request));
+});
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok && response.type === 'basic') {
+      const clone = response.clone();
+      (await caches.open(CACHE)).put(request, clone);
+    }
+    return response;
+  } catch (e) {
+    return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+  }
+}
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const clone = response.clone();
+      (await caches.open(CACHE)).put(request, clone);
+    }
+    return response;
+  } catch (e) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    return caches.match('/minilit-freelance/index.html');
+  }
+}
+
+async function networkOnly(request) {
+  try {
+    return await fetch(request);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'Network unavailable' }), {
+      status: 503, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+self.addEventListener('push', event => {
+  let data;
+  try { data = event.data ? event.data.json() : {}; }
+  catch (_) { data = { title: 'MiniLIT', body: event.data?.text() || '' }; }
   const title = data.title || 'MiniLIT';
   const options = {
     body: data.body || '',
@@ -77,11 +104,9 @@ self.addEventListener('push', event => {
     vibrate: [200, 100, 200],
     requireInteraction: true,
   };
-  
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification click handler
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const urlToOpen = event.notification.data?.link || '/minilit-freelance/';

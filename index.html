@@ -27,15 +27,6 @@
   }catch(_){ document.documentElement.setAttribute('data-theme','light'); }
 })();
 </script>
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script>
-  window.SUPABASE_URL = 'https://cloyutdjfyarifvhhkga.supabase.co';
-  window.SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsb3l1dGRqZnlhcmlmdmhoa2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTE2NTgsImV4cCI6MjA5NTAyNzY1OH0.Q6MP8tGXqZ-_tIVdPpLcf1Z7OHpBUbmtV0baqiCMknQ';
-  window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
-    realtime: { params: { eventsPerSecond: 10 } }
-  });
-</script>
 <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
@@ -121,8 +112,7 @@
 <div id="modalRoot"></div>
 <div id="toastWrap" class="toast-wrap"></div>
 
-<script type="module">
-import './src/app.js';
-</script>
+<!-- Vite entry -->
+<script type="module" src="/src/main.js"></script>
 </body>
 </html>

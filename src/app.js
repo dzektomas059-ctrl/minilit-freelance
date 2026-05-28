@@ -1,7 +1,7 @@
 import { API } from './api.js';
 import { store } from './store.js';
 import { Router } from './router.js';
-import { setLocale, getLocale } from './i18n.js';
+import { setLocale, getLocale, t } from './i18n.js';
 import { viewProfile, bindProfile } from './views/profile.js';
 import { viewMessages, bindMessages } from './views/chat.js';
 import { viewAdmin, bindAdmin } from './views/admin.js';
