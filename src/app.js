@@ -117,19 +117,22 @@ views['mobile'] = { view: () => viewInfoPage('mobile'), bind: () => {} };
 
 // Register all routes with the router
 const router = new Router();
-router.onChange((route, params) => {
-  const app = document.getElementById('app');
-  const viewDef = views[route];
-  if (viewDef) {
+for (const [pattern, viewDef] of Object.entries(views)) {
+  router.on(pattern, (params) => {
+    const app = document.getElementById('app');
     try {
-      app.innerHTML = viewDef.view(params);
+      const html = viewDef.view(params);
+      app.innerHTML = html;
       viewDef.bind(app, params);
+      return html;
     } catch (e) {
-      console.error('View error:', route, e);
-      app.innerHTML = `<div class="container"><div class="card"><h2>Ошибка</h2><p>${window.esc(e.message)}</p></div></div>`;
+      console.error('View error:', pattern, e);
+      const errHtml = `<div class="container"><div class="card"><h2>Ошибка</h2><p>${window.esc(e.message)}</p></div></div>`;
+      app.innerHTML = errHtml;
+      return errHtml;
     }
-  }
-});
+  });
+}
 
 // Initialize the app
 (async () => {
