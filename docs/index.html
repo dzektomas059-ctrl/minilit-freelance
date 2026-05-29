@@ -2022,16 +2022,16 @@ const fromOrder = o => o && ({
     if(uid){ sb.from('profiles').update({ activity_status: status }).eq('id', uid).then(); }
     incrementQuestProgress('changeStatus');
   }
-  async function updateCategoryCounters(){
+  function updateCategoryCounters(){
     try {
-      if(typeof sb === 'undefined'){ applyFallbackCounters(); return; }
-      const {data:jobs,error:je}=await sb.from('jobs').select('category').eq('status','open');
-      const {data:services,error:se}=await sb.from('services').select('category');
-      if(je||se){ console.warn('Supabase error, using fallback'); applyFallbackCounters(); return; }
       const counts={"Код и Скрипты":0,"Дизайн и Арт":0,"Тексты и Локализация":0,"Продвижение и Трафик":0,"Саунд и Видеомонтаж":0,"ИИ и Нейросети":0,"Буст и Услуги":0,"Гейминг и Dota 2":0};
-      if(jobs){ jobs.forEach(i=>{ const m=CATEGORY_MAPPER[i.category]||i.category; if(counts[m]!==undefined)counts[m]++; }); }
-      if(services){ services.forEach(i=>{ const m=CATEGORY_MAPPER[i.category]||i.category; if(counts[m]!==undefined)counts[m]++; }); }
-      if(Object.values(counts).reduce((a,b)=>a+b,0)===0){ applyFallbackCounters(); return; }
+      var tasks = App.state.tasks.filter(function(t){ return t.status !== 'closed' && t.status !== 'completed'; });
+      var services = App.state.services;
+      if(tasks.length||services.length){
+        tasks.forEach(function(i){ var m=CATEGORY_MAPPER[i.category]||i.category; if(counts[m]!==undefined)counts[m]++; });
+        services.forEach(function(i){ var m=CATEGORY_MAPPER[i.category]||i.category; if(counts[m]!==undefined)counts[m]++; });
+      }
+      if(Object.values(counts).reduce(function(a,b){return a+b;},0)===0){ applyFallbackCounters(); return; }
       renderCountersUI(counts);
     } catch(e){ console.error('category counters error:',e); applyFallbackCounters(); }
   }
@@ -6191,6 +6191,7 @@ function viewAdminComplaints(){
   function bindAfterRender(route, param, params){
     // delegated handlers per route
     if (route === 'home'){
+      updateCategoryCounters();
       const join = $('#ctaJoin'); if (join) join.onclick = () => showRegister();
       // Landing: reveal animations / IntersectionObserver
       if (!window._landingObs){
