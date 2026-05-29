@@ -797,12 +797,15 @@ function notifIcon(type) {
 }
 
 // Stubs — TODO: implement properly
-window.openTaskForm = function openTaskForm() { toast('Форма создания задания — в разработке', 'error'); };
-window.openServiceForm = function openServiceForm() { toast('Форма создания услуги — в разработке', 'error'); };
-window.openEditProfile = function openEditProfile() { toast('Редактирование профиля — в разработке', 'error'); };
+function openTaskForm() { toast('Форма создания задания — в разработке', 'error'); }
+window.openTaskForm = openTaskForm;
+function openServiceForm() { toast('Форма создания услуги — в разработке', 'error'); }
+window.openServiceForm = openServiceForm;
+function openEditProfile() { toast('Редактирование профиля — в разработке', 'error'); }
+window.openEditProfile = openEditProfile;
 
 // ===== MODAL / TOAST HELPERS =====
-window.toast = function toast(msg, kind) {
+function toast(msg, kind) {
   const el = document.createElement('div');
   el.className = 'toast ' + kind;
   el.textContent = msg;
@@ -810,9 +813,10 @@ window.toast = function toast(msg, kind) {
   if (wrap) wrap.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = '.3s'; }, 2400);
   setTimeout(() => el.remove(), 2800);
-};
+}
+window.toast = toast;
 
-window.openModal = function openModal(html) {
+function openModal(html) {
   const root = document.getElementById('modalRoot');
   if (!root) return;
   root.innerHTML = `<div class="modal-bg open"><div class="modal-wrap"><div class="modal">${html}</div></div></div>`;
@@ -825,14 +829,16 @@ window.openModal = function openModal(html) {
   setTimeout(() => (modal?.querySelector('input,textarea,select,button,[tabindex]') || modal)?.focus(), 50);
   document.body.classList.add('modal-open');
   return bg;
-};
+}
+window.openModal = openModal;
 
-window.closeModal = function closeModal() {
+function closeModal() {
   const root = document.getElementById('modalRoot');
   if (root) root.innerHTML = '';
   document.removeEventListener('keydown', escClose);
   document.body.classList.remove('modal-open');
-};
+}
+window.closeModal = closeModal;
 
 function escClose(e) { if (e.key === 'Escape') closeModal(); }
 
@@ -918,7 +924,7 @@ function validateForm(rules, formData) {
 }
 
 // ===== AUTH MODALS =====
-window.showLogin = function showLogin() {
+function showLogin() {
   openModal(`
     <button class="close" data-close>&times;</button>
     <h2>Вход в MiniLIT</h2>
@@ -976,8 +982,9 @@ window.showLogin = function showLogin() {
   });
   document.getElementById('forgotPwdLink')?.addEventListener('click', () => { closeModal(); setTimeout(showForgotPassword, 100); });
 };
+window.showLogin = showLogin;
 
-window.showRegister = function showRegister() {
+function showRegister() {
   openModal(`
     <button class="close" data-close>&times;</button>
     <h2>Регистрация</h2>
@@ -1064,6 +1071,7 @@ window.showRegister = function showRegister() {
     }
   });
 };
+window.showRegister = showRegister;
 
 function showForgotPassword() {
   openModal(`
@@ -1102,7 +1110,7 @@ function showForgotPassword() {
 }
 
 // === TOP ACTIONS ===
-window.renderTopActions = function renderTopActions() {
+function renderTopActions() {
   const root = document.getElementById('topActions');
   if (!root) return;
   const me = store.me();
@@ -1110,8 +1118,8 @@ window.renderTopActions = function renderTopActions() {
     root.innerHTML = `
       <button class="btn-ghost" id="openLogin">${t('login')}</button>
       <button class="btn-primary btn-sm" id="openRegister">${t('register')}</button>`;
-    root.querySelector('#openLogin')?.addEventListener('click', () => showLogin());
-    root.querySelector('#openRegister')?.addEventListener('click', () => showRegister());
+    root.querySelector('#openLogin')?.addEventListener('click', () => window.showLogin());
+    root.querySelector('#openRegister')?.addEventListener('click', () => window.showRegister());
     return;
   }
   
@@ -1155,6 +1163,7 @@ window.renderTopActions = function renderTopActions() {
   
   bindTopActions();
 };
+window.renderTopActions = renderTopActions;
 
 function bindTopActions() {
   const root = document.getElementById('topActions');
