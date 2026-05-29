@@ -3221,13 +3221,13 @@ async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
     },
     tavernProject(id){ return (this._tavernProjects||[]).find(p => p.id === id); },
     async createTavernProject(data){
-      const me = this.me(); if (!me) return null;
+      const me = this.me(); if (!me) throw new Error('Войдите в аккаунт');
       const { data: project, error } = await sb.from('tavern_projects').insert([{
         title: data.title.trim(), description: data.description.trim(),
         budget: Number(data.budget)||0, category: data.category,
         client_id: me.id,
       }]).select().single();
-      if (error) return null;
+      if (error) throw error;
       const p = fromTavernProject(project);
       if (!this._tavernProjects) this._tavernProjects = [];
       this._tavernProjects.unshift(p);
@@ -7015,16 +7015,20 @@ function emptyState(text, cta=''){
         if (errs){ applyFieldErrors(form, errs); return; }
         const btn = form.querySelector('[type="submit"]');
         btn.disabled = true; btn.textContent = 'Публикация...';
-        const result = await App.createTavernProject({
-          title: data.title, description: data.description,
-          category: data.category, budget: data.budget,
-        });
-        btn.disabled = false; btn.textContent = 'Опубликовать';
-        if (!result){ toast('Не удалось создать проект','error'); return; }
-        toast('Проект опубликован','success');
-        closeModal();
-        navigate('#tavern?view=project&project=' + result.id);
-        render();
+        try {
+          const result = await App.createTavernProject({
+            title: data.title, description: data.description,
+            category: data.category, budget: data.budget,
+          });
+          btn.disabled = false; btn.textContent = 'Опубликовать';
+          toast('Проект опубликован','success');
+          closeModal();
+          navigate('#tavern?view=project&project=' + result.id);
+          render();
+        } catch(err){
+          btn.disabled = false; btn.textContent = 'Опубликовать';
+          toast('Ошибка: ' + (err.message||'Не удалось создать проект'),'error');
+        }
       });
     }
   }
