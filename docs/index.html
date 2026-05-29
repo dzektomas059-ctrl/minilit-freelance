@@ -6541,8 +6541,8 @@ function viewAdminComplaints(){
         } catch(e){ toast('Ошибка таймера','error'); }
       });
       // Notification settings toggles
-      $$('#notifSettings input[type=checkbox]').forEach(cb => cb.onchange = async () => {
-        if (cb.id === 'pushToggle') {
+      $$('.notif-settings-block input[type=checkbox]').forEach(cb => cb.onchange = async () => {
+        if (cb.dataset.notif === 'push') {
           if (cb.checked) {
             const ok = await subscribePush();
             if (!ok) { cb.checked = false; toast('Push-уведомления недоступны (нужен VAPID ключ)','error'); }
@@ -6554,7 +6554,8 @@ function viewAdminComplaints(){
           return;
         }
         const me = App.me(); if (!me) return;
-        const type = cb.dataset.ntype; if (!type) return;
+        const map = {orders:'order',responses:'proposal',messages:'message',reviews:'review',system:'system'};
+        const type = map[cb.dataset.notif]; if (!type) return;
         const val = cb.checked;
         me.notifPrefs = me.notifPrefs || {};
         me.notifPrefs[type] = val;
