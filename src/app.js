@@ -161,7 +161,10 @@ for (const [pattern, viewDef] of Object.entries(views)) {
       await API.updateOnlineStatus(session.user.id);
     }
     store.set('ready', true);
-    
+
+    // Render header (login/register buttons or user menu)
+    renderTopActions();
+
     // Resolve current route
     router.resolve();
     
