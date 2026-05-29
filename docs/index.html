@@ -236,7 +236,7 @@ img{max-width:100%;display:block}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--line)}
 /* metric tiles — hardcoded across all themes for maximum contrast */
 .metric-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
-.notif-settings{display:flex;flex-direction:column;gap:8px}
+.notif-settings{display:flex;flex-direction:row;flex-wrap:wrap;gap:12px 20px;align-items:center}
 .notif-toggle{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 12px;border-radius:8px;background:var(--bg2,#f3f4f6);transition:background .2s}
 .notif-toggle:hover{background:var(--green-l)}
 .notif-toggle input[type=checkbox]{width:16px;height:16px;accent-color:var(--green);cursor:pointer}
@@ -5110,7 +5110,7 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
               <span>${({order:'Заказы',proposal:'Отклики',message:'Сообщения',review:'Отзывы',system:'Системные'})[t]||t}</span>
             </label>
           `).join('')}
-          <label class="notif-toggle">
+          <label class="notif-toggle" style="white-space:nowrap">
             <input type="checkbox" id="pushToggle" ${localStorage.getItem('push_sub')?'checked':''}>
             <span>Push-уведомления</span>
           </label>
