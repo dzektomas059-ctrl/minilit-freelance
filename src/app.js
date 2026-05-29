@@ -29,6 +29,18 @@ window.aviHTML = u => u && u.avatar
   ? `<img src="${window.esc(u.avatar)}" alt="${window.esc(u.name)}" loading="lazy">`
   : window.initials(u?.name);
 
+// Category catalog
+const CATS = [
+  { id: 'design',   name: 'Дизайн и Арт' },
+  { id: 'dev',      name: 'Код и Скрипты' },
+  { id: 'gaming',   name: 'Гейминг и Dota 2' },
+  { id: 'text',     name: 'Тексты и Локализация' },
+  { id: 'traffic',  name: 'Продвижение и Трафик' },
+  { id: 'av',       name: 'Саунд и Видеомонтаж' },
+  { id: 'ai',       name: 'ИИ и Нейросети' },
+  { id: 'boost',    name: 'Буст и Услуги' },
+];
+
 // View registry: maps patterns to { view, bind } functions
 const views = {};
 

@@ -13,11 +13,6 @@ const STATIC_URLS = [
   '/minilit-freelance/src/views/chat.js',
   '/minilit-freelance/src/views/admin.js',
   '/minilit-freelance/manifest.json',
-  '/minilit-freelance/icons/icon-192.png',
-  '/minilit-freelance/icons/icon-512.png',
-  '/minilit-freelance/icons/apple-touch-icon.png',
-  '/minilit-freelance/icons/favicon.ico',
-  '/minilit-freelance/assets/',
 ];
 const API_HOSTS = ['supabase.co', 'api.resend.com'];
 
@@ -98,8 +93,8 @@ self.addEventListener('push', event => {
   const title = data.title || 'MiniLIT';
   const options = {
     body: data.body || '',
-    icon: '/minilit-freelance/icons/icon-192.png',
-    badge: '/minilit-freelance/icons/icon-192.png',
+    icon: '/minilit-freelance/icons/icon-192.svg',
+    badge: '/minilit-freelance/icons/icon-192.svg',
     data: data.data || {},
     vibrate: [200, 100, 200],
     requireInteraction: true,
