@@ -4432,7 +4432,9 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
   function tavernProjectCard(p, me){
     const author = App.user(p.clientId);
     const authorName = author ? esc(author.name) : '—';
-    const authorAvi = author && author.avatar_url ? `<img class="tavern-card-avi" src="${esc(author.avatar_url)}" alt="">` : `<div class="tavern-card-avi-init">${author && author.name ? initials(author.name) : '?'}</div>`;
+    const authorAvi = author && author.avatar
+      ? `<img class="tavern-card-avi" src="${esc(author.avatar)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tavern-card-avi-init" style="display:none">${initials(author.name)}</div>`
+      : `<div class="tavern-card-avi-init">${author && author.name ? initials(author.name) : '?'}</div>`;
     const link = p.isJob ? `#task/${p.id}` : `#tavern?view=project&project=${p.id}`;
     const daysLeft = Math.floor(Math.random() * 5) + 1;
     const hoursLeft = Math.floor(Math.random() * 24);
