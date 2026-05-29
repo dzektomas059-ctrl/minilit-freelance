@@ -796,14 +796,310 @@ function notifIcon(type) {
   return icons[type] || '🔔';
 }
 
-window.openTaskForm = function openTaskForm() { /* implemented in HTML */ };
-window.openServiceForm = function openServiceForm() { /* implemented in HTML */ };
-window.openEditProfile = function openEditProfile(params) { /* implemented in HTML */ };
-window.showLogin = function showLogin() { /* implemented in HTML */ };
-window.showRegister = function showRegister() { /* implemented in HTML */ };
-window.toast = function toast(msg, type) { /* implemented in HTML */ };
-window.openModal = function openModal(html) { /* implemented in HTML */ };
-window.closeModal = function closeModal(params) { /* implemented in HTML */ };
+// Stubs — TODO: implement properly
+window.openTaskForm = function openTaskForm() { toast('Форма создания задания — в разработке', 'error'); };
+window.openServiceForm = function openServiceForm() { toast('Форма создания услуги — в разработке', 'error'); };
+window.openEditProfile = function openEditProfile() { toast('Редактирование профиля — в разработке', 'error'); };
+
+// ===== MODAL / TOAST HELPERS =====
+window.toast = function toast(msg, kind) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.textContent = msg;
+  const wrap = document.getElementById('toastWrap');
+  if (wrap) wrap.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = '.3s'; }, 2400);
+  setTimeout(() => el.remove(), 2800);
+};
+
+window.openModal = function openModal(html) {
+  const root = document.getElementById('modalRoot');
+  if (!root) return;
+  root.innerHTML = `<div class="modal-bg open"><div class="modal-wrap"><div class="modal">${html}</div></div></div>`;
+  const bg = root.firstElementChild;
+  bg.addEventListener('click', e => { if (e.target === bg) closeModal(); });
+  document.addEventListener('keydown', escClose);
+  const modal = bg.querySelector('.modal');
+  if (modal) trapFocus(modal);
+  if (modal && window.matchMedia('(max-width: 900px)').matches) enableSheetDragDismiss(modal);
+  setTimeout(() => (modal?.querySelector('input,textarea,select,button,[tabindex]') || modal)?.focus(), 50);
+  document.body.classList.add('modal-open');
+  return bg;
+};
+
+window.closeModal = function closeModal() {
+  const root = document.getElementById('modalRoot');
+  if (root) root.innerHTML = '';
+  document.removeEventListener('keydown', escClose);
+  document.body.classList.remove('modal-open');
+};
+
+function escClose(e) { if (e.key === 'Escape') closeModal(); }
+
+function trapFocus(container) {
+  const focusable = 'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  container.addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    const els = [...container.querySelectorAll(focusable)].filter(el => el.offsetParent !== null);
+    if (!els.length) return;
+    const first = els[0], last = els[els.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+}
+
+function enableSheetDragDismiss(el) {
+  let startY = 0, dy = 0, dragging = false;
+  const onStart = e => {
+    const t = e.touches ? e.touches[0] : e;
+    const rect = el.getBoundingClientRect();
+    if (t.clientY - rect.top > 64 && el.scrollTop > 0) return;
+    startY = t.clientY; dy = 0; dragging = true;
+    el.style.transition = 'none';
+  };
+  const onMove = e => {
+    if (!dragging) return;
+    const t = e.touches ? e.touches[0] : e;
+    dy = Math.max(0, t.clientY - startY);
+    if (dy > 4 && e.cancelable) e.preventDefault();
+    el.style.transform = `translateY(${dy}px)`;
+  };
+  const onEnd = () => {
+    if (!dragging) return;
+    dragging = false;
+    el.style.transition = 'transform .22s ease';
+    if (dy > 110) { el.style.transform = 'translateY(100%)'; setTimeout(closeModal, 180); }
+    else { el.style.transform = ''; }
+  };
+  el.addEventListener('touchstart', onStart, { passive: true });
+  el.addEventListener('touchmove', onMove, { passive: false });
+  el.addEventListener('touchend', onEnd, { passive: true });
+  el.addEventListener('touchcancel', onEnd, { passive: true });
+}
+
+// ===== AUTH HELPERS =====
+function bindAuthCommon() {
+  const root = document.getElementById('modalRoot');
+  if (!root) return;
+  root.querySelector('[data-close]')?.addEventListener('click', closeModal);
+  root.querySelectorAll('[data-switch]').forEach(a => a.addEventListener('click', () => {
+    closeModal();
+    a.dataset.switch === 'register' ? showRegister() : showLogin();
+  }));
+}
+
+function setErr(form, field, msg) {
+  const inp = form.querySelector(`[name="${field}"]`);
+  const er = form.querySelector(`[data-err="${field}"]`);
+  if (inp) inp.classList.add('error');
+  if (er) er.textContent = msg;
+}
+
+function clearErrors(form) {
+  form.querySelectorAll('.input').forEach(i => i.classList.remove('error'));
+  form.querySelectorAll('.err').forEach(e => e.textContent = '');
+}
+
+function validateForm(rules, formData) {
+  const errors = {};
+  for (const field of Object.keys(rules)) {
+    const val = (formData[field] || '').toString().trim();
+    const rule = rules[field];
+    if (rule.required && !val) { errors[field] = rule.label + ' обязательно'; continue; }
+    if (rule.fieldType === 'email' && val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { errors[field] = 'Некорректный email'; continue; }
+    if (rule.minLen && val.length < rule.minLen) { errors[field] = 'Минимум ' + rule.minLen + ' символов'; continue; }
+    if ((rule.fieldType === 'number' || rule.fieldType === 'money')) {
+      const num = Number(val);
+      if (val && (isNaN(num) || num < (rule.minVal || 0))) { errors[field] = 'Минимальное значение ' + (rule.minVal || 0); continue; }
+      if (val && rule.maxVal && num > rule.maxVal) { errors[field] = 'Максимум ' + rule.maxVal; continue; }
+    }
+  }
+  return Object.keys(errors).length ? errors : null;
+}
+
+// ===== AUTH MODALS =====
+window.showLogin = function showLogin() {
+  openModal(`
+    <button class="close" data-close>&times;</button>
+    <h2>Вход в MiniLIT</h2>
+    <p class="sub">Используйте demo@mail.ru / 123456 для входа в демо-аккаунт.</p>
+    <form id="loginForm">
+      <div class="form-row">
+        <label>Email</label>
+        <input class="input" type="email" name="email" required placeholder="you@mail.ru" value="demo@mail.ru">
+        <div class="err" data-err="email"></div>
+      </div>
+      <div class="form-row">
+        <label>Пароль</label>
+        <input class="input" type="password" name="password" required minlength="6" placeholder="••••••" value="123456">
+        <div class="err" data-err="password"></div>
+      </div>
+      <button class="btn-primary btn-block btn-lg" type="submit">${t('login')}</button>
+      <div style="text-align:center;margin-top:10px">
+        <a id="forgotPwdLink" style="font-size:13px;color:var(--green);cursor:pointer">${t('forgot_password')}</a>
+      </div>
+    </form>
+    <div class="auth-divider">${t('or')}</div>
+    <button class="btn-google" id="googleLoginBtn">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H42V20H24v8h11.3c-1.1 3.4-4 5.8-7.6 6.6l.1.1 6.2 4.8.4.2C39.2 36.4 44 30.8 44 24c0-1.4-.1-2.8-.4-4z"/><path fill="#FF3D00" d="M10.5 28.2 10.4 28.2l-6.2-4.8-.2-.2C3.1 25.3 3 26.7 3 28c0 5.2 2.1 10 5.6 13.4l.1-.1 6.2-4.8.1-.1C13.1 34.2 11.5 31.3 10.5 28.2z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.8l-6.2-4.8c-1.8 1.2-4.1 2-6.7 2-3.1 0-5.9-1.2-8-3.2l-.1.1-6.2 4.8-.1.1C11.9 40.4 17.6 44 24 44z"/><path fill="#1976D2" d="M24 12c3.1 0 5.9 1.2 8 3.2l.1-.1 5.5-5.5.1-.1C33.8 6.4 29.1 4 24 4 17.6 4 11.9 7.6 8.9 12.6l.1.1 6.2 4.8.1-.1C14.8 16.3 16.3 13.3 19 11.7 20.5 10.7 22.2 12 24 12z"/></svg>
+      <span>${t('google_sign_in')}</span>
+    </button>
+    <div class="switch-link">Нет аккаунта? <a data-switch="register">${t('register')}</a></div>
+  `);
+  bindAuthCommon();
+  document.getElementById('googleLoginBtn')?.addEventListener('click', () => { API.signInWithGoogle(); });
+  document.getElementById('loginForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const email = fd.get('email').toString();
+    const password = fd.get('password').toString();
+    const btn = e.target.querySelector('button[type=submit]');
+    clearErrors(e.target);
+    if (!email) return setErr(e.target, 'email', 'Введите email');
+    if (password.length < 6) return setErr(e.target, 'password', 'Минимум 6 символов');
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Входим…';
+    try {
+      await API.signIn(email, password);
+      closeModal();
+      const me = store.me();
+      toast('Добро пожаловать, ' + (me?.name || '') + '!', 'success');
+      renderTopActions();
+      router.resolve();
+    } catch (err) {
+      const m = /Invalid login|invalid_grant|invalid|email/i.test(err?.message || '')
+        ? 'Неверный email или пароль' : (err?.message || 'Не удалось войти');
+      setErr(e.target, 'password', m);
+    } finally {
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = oldText; }
+    }
+  });
+  document.getElementById('forgotPwdLink')?.addEventListener('click', () => { closeModal(); setTimeout(showForgotPassword, 100); });
+};
+
+window.showRegister = function showRegister() {
+  openModal(`
+    <button class="close" data-close>&times;</button>
+    <h2>Регистрация</h2>
+    <p class="sub">Создайте аккаунт за 30 секунд. Никакого SMS и почты.</p>
+    <form id="regForm">
+      <div class="form-row">
+        <label>Имя</label>
+        <input class="input" name="name" required minlength="2" placeholder="Например, Алексей Иванов">
+        <div class="err" data-err="name"></div>
+      </div>
+      <div class="form-row">
+        <label>Email</label>
+        <input class="input" type="email" name="email" required placeholder="you@mail.ru">
+        <div class="err" data-err="email"></div>
+      </div>
+      <div class="form-row">
+        <label>Пароль</label>
+        <input class="input" type="password" name="password" required minlength="6" placeholder="не менее 6 символов">
+        <div class="err" data-err="password"></div>
+      </div>
+      <div class="form-row">
+        <label>Я хочу...</label>
+        <div class="chips" data-role-picker>
+          <span class="chip active" data-role="freelancer">Выполнять заказы (Фрилансер)</span>
+          <span class="chip" data-role="client">Размещать заказы (Заказчик)</span>
+        </div>
+        <input type="hidden" name="role" value="freelancer">
+      </div>
+      <button class="btn-primary btn-block btn-lg" type="submit">${t('register')}</button>
+    </form>
+    <div class="auth-divider">${t('or')}</div>
+    <button class="btn-google" id="googleRegisterBtn">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H42V20H24v8h11.3c-1.1 3.4-4 5.8-7.6 6.6l.1.1 6.2 4.8.4.2C39.2 36.4 44 30.8 44 24c0-1.4-.1-2.8-.4-4z"/><path fill="#FF3D00" d="M10.5 28.2 10.4 28.2l-6.2-4.8-.2-.2C3.1 25.3 3 26.7 3 28c0 5.2 2.1 10 5.6 13.4l.1-.1 6.2-4.8.1-.1C13.1 34.2 11.5 31.3 10.5 28.2z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.8 13.5-4.8l-6.2-4.8c-1.8 1.2-4.1 2-6.7 2-3.1 0-5.9-1.2-8-3.2l-.1.1-6.2 4.8-.1.1C11.9 40.4 17.6 44 24 44z"/><path fill="#1976D2" d="M24 12c3.1 0 5.9 1.2 8 3.2l.1-.1 5.5-5.5.1-.1C33.8 6.4 29.1 4 24 4 17.6 4 11.9 7.6 8.9 12.6l.1.1 6.2 4.8.1-.1C14.8 16.3 16.3 13.3 19 11.7 20.5 10.7 22.2 12 24 12z"/></svg>
+      <span>${t('google_sign_in')}</span>
+    </button>
+    <div class="switch-link">Уже есть аккаунт? <a data-switch="login">${t('login')}</a></div>
+  `);
+  bindAuthCommon();
+  const picker = document.querySelector('[data-role-picker]');
+  if (picker) {
+    picker.addEventListener('click', e => {
+      const c = e.target.closest('.chip'); if (!c) return;
+      picker.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+      document.querySelector('input[name=role]').value = c.dataset.role;
+    });
+  }
+  document.getElementById('googleRegisterBtn')?.addEventListener('click', () => { API.signInWithGoogle(); });
+  document.getElementById('regForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = {
+      name: fd.get('name').toString().trim(),
+      email: fd.get('email').toString().trim(),
+      password: fd.get('password').toString(),
+      role: fd.get('role').toString(),
+    };
+    const btn = e.target.querySelector('button[type=submit]');
+    clearErrors(e.target);
+    const errs = validateForm({
+      name: { required: true, label: 'Имя', minLen: 2 },
+      email: { required: true, label: 'Email', fieldType: 'email' },
+      password: { required: true, label: 'Пароль', minLen: 6 },
+    }, data);
+    if (errs) { Object.entries(errs).forEach(([f, m]) => setErr(e.target, f, m)); return; }
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Регистрируем…';
+    try {
+      await API.signUp(data.email, data.password, data.name);
+      closeModal();
+      toast('Аккаунт создан! Добро пожаловать на MiniLIT.', 'success');
+      renderTopActions();
+      router.resolve();
+    } catch (err) {
+      const m = err?.message || '';
+      let msg = m;
+      if (/already registered|exists|duplicate/i.test(m)) msg = 'Пользователь с таким email уже зарегистрирован';
+      else if (/password/i.test(m) && /short|6|weak/i.test(m)) msg = 'Пароль слишком короткий (минимум 6 символов)';
+      else if (/email/i.test(m) && /invalid|valid/i.test(m)) msg = 'Некорректный email';
+      else if (/rate.?limit|too many/i.test(m)) msg = 'Слишком много попыток. Подождите минуту.';
+      setErr(e.target, 'password', msg);
+    } finally {
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = oldText; }
+    }
+  });
+};
+
+function showForgotPassword() {
+  openModal(`
+    <button class="close" data-close>&times;</button>
+    <h2>Восстановление пароля</h2>
+    <p class="sub">Мы отправим ссылку для сброса пароля на ваш email.</p>
+    <form id="resetPwdForm">
+      <div class="form-row">
+        <label>Email</label>
+        <input class="input" type="email" name="email" required placeholder="you@mail.ru">
+        <div class="err" data-err="email"></div>
+      </div>
+      <button class="btn-primary btn-block btn-lg" type="submit">Отправить</button>
+    </form>
+    <div class="switch-link"><a data-switch="login">Вернуться ко входу</a></div>
+  `);
+  bindAuthCommon();
+  document.getElementById('resetPwdForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = new FormData(e.target).get('email').toString();
+    const btn = e.target.querySelector('button[type=submit]');
+    clearErrors(e.target);
+    if (!email) return setErr(e.target, 'email', 'Введите email');
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Отправляем…';
+    try {
+      await API.resetPassword(email);
+      closeModal();
+      toast('Ссылка для сброса отправлена на почту', 'success');
+    } catch (err) {
+      setErr(e.target, 'email', (err?.message) || 'Ошибка отправки');
+    } finally {
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = oldText; }
+    }
+  });
+}
 
 // === TOP ACTIONS ===
 window.renderTopActions = function renderTopActions() {
