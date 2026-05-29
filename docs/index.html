@@ -2024,14 +2024,12 @@ const fromOrder = o => o && ({
   }
   function updateCategoryCounters(){
     try {
-      const counts={"Код и Скрипты":0,"Дизайн и Арт":0,"Тексты и Локализация":0,"Продвижение и Трафик":0,"Саунд и Видеомонтаж":0,"ИИ и Нейросети":0,"Буст и Услуги":0,"Гейминг и Dota 2":0};
-      var tasks = App.state.tasks.filter(function(t){ return t.status !== 'closed' && t.status !== 'completed'; });
-      var services = App.state.services;
-      if(tasks.length||services.length){
-        tasks.forEach(function(i){ var m=CATEGORY_MAPPER[i.category]||i.category; if(counts[m]!==undefined)counts[m]++; });
-        services.forEach(function(i){ var m=CATEGORY_MAPPER[i.category]||i.category; if(counts[m]!==undefined)counts[m]++; });
-      }
-      if(Object.values(counts).reduce(function(a,b){return a+b;},0)===0){ applyFallbackCounters(); return; }
+      var counts={"Код и Скрипты":0,"Дизайн и Арт":0,"Тексты и Локализация":0,"Продвижение и Трафик":0,"Саунд и Видеомонтаж":0,"ИИ и Нейросети":0,"Буст и Услуги":0,"Гейминг и Dota 2":0};
+      var toName=function(cat){ var c=CATS.find(function(c){return c.id===cat;}); return c?c.name: (CATEGORY_MAPPER[cat]||cat); };
+      App.state.tasks.forEach(function(t){ if(t.status!=='closed'&&t.status!=='completed'){ var n=toName(t.category); if(counts[n]!==undefined)counts[n]++; } });
+      App.state.services.forEach(function(s){ var n=toName(s.category); if(counts[n]!==undefined)counts[n]++; });
+      var total=0; for(var k in counts)total+=counts[k];
+      if(total===0){ applyFallbackCounters(); return; }
       renderCountersUI(counts);
     } catch(e){ console.error('category counters error:',e); applyFallbackCounters(); }
   }
