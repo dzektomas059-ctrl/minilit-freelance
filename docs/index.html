@@ -736,12 +736,12 @@ body.is-offer .category-bar-scroll{width:auto;max-width:1100px;padding:0 20px;fl
 [data-theme="dark"] .balance-dropdown .row-balance{color:var(--green)}
 /* ---------- notification bell + dropdown ---------- */
 .notif-wrap{position:relative;flex-shrink:0}
-.notif-toggle{
+.notif-wrap .notif-toggle{
   display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;
   border-radius:50%;border:none;background:transparent;color:#6B7280;cursor:pointer;
   position:relative;transition:.15s;font-size:18px;line-height:1;
 }
-.notif-toggle:hover{background:#f4f6f9;color:#1f2937}
+.notif-wrap .notif-toggle:hover{background:#f4f6f9;color:#1f2937}
 .notif-badge{
   position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;
   border-radius:8px;background:#ef4444;color:#fff;font-size:10px;font-weight:700;
@@ -785,8 +785,8 @@ body.is-offer .category-bar-scroll{width:auto;max-width:1100px;padding:0 20px;fl
 .notif-item .ni-body .ni-text{font-size:12px;color:#6B7280;line-height:1.3;margin-top:1px}
 .notif-item .ni-time{font-size:11px;color:#9aa3af;margin-top:2px}
 .notif-empty{padding:28px 14px;text-align:center;color:#9aa3af;font-size:13px}
-[data-theme="dark"] .notif-toggle{color:var(--t-muted)}
-[data-theme="dark"] .notif-toggle:hover{background:var(--t-surface-hover);color:var(--t-text)}
+[data-theme="dark"] .notif-wrap .notif-toggle{color:var(--t-muted)}
+[data-theme="dark"] .notif-wrap .notif-toggle:hover{background:var(--t-surface-hover);color:var(--t-text)}
 [data-theme="dark"] .notif-dropdown{background:var(--t-surface);border-color:var(--t-line);box-shadow:var(--t-dd-shadow)}
 [data-theme="dark"] .notif-dropdown .nd-head{color:var(--t-text);border-color:var(--t-line)}
 [data-theme="dark"] .notif-item{border-color:var(--t-line)}
@@ -2680,11 +2680,13 @@ async sendMessage(chatId, senderId, text, imageUrl, fileName, fileType){
         .select()
         .single();
       if (error) throw error;
+      this.state.portfolio.unshift(data);
       return data;
     },
     async deletePortfolio(portfolioId){
       const { error } = await sb.from('portfolio').delete().eq('id', portfolioId);
       if (error) throw error;
+      this.state.portfolio = this.state.portfolio.filter(function(p){ return p.id !== portfolioId; });
     },
     async updatePortfolio(portfolioId, fields){
       const { data, error } = await sb.from('portfolio')
@@ -5042,23 +5044,7 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
         <h2 style="margin-top:24px">Услуги (${services.length})</h2>
         ${services.length ? `<div class="svc-grid">${services.map(serviceCard).join('')}</div>` : emptyState(own?'Вы пока не добавили услуги':'У этого фрилансера пока нет услуг', own?'<a class="btn-primary" href="#me?tab=services" data-link>Добавить услугу</a>':'')}
       `:''}
-      <div class="portfolio-section">
-        <div class="between" style="margin-bottom:14px">
-          <h2 style="margin:0">Портфолио (${portfolio.length})</h2>
-          ${own ? `<button class="btn-primary btn-sm" id="addPortfolio">+ Добавить</button>` : ''}
-        </div>
-        ${portfolio.length ? `<div class="portfolio-grid">${portfolio.map(p => `
-          <div class="portfolio-item" data-portfolio="${p.id}">
-            ${p.image_url ? `<img src="${esc(p.image_url)}" alt="${esc(p.title)}">` : '<div style="height:200px;background:#e6e9ee;display:flex;align-items:center;justify-content:center;color:#9aa0a6">Нет изображения</div>'}
-            <div class="p-info">
-              <div class="p-title">${esc(p.title)}</div>
-              ${p.project_url ? `<a href="${esc(p.project_url)}" target="_blank" rel="noopener" style="font-size:13px;color:var(--green);margin:4px 0;display:inline-block">🔗 Открыть проект</a>` : ''}
-              <div class="p-desc">${esc(p.description||'')}</div>
-              ${own ? `<div class="p-actions"><button class="btn-outline btn-sm" data-delete-portfolio="${p.id}">Удалить</button></div>` : ''}
-            </div>
-          </div>
-        `).join('')}` : `<div class="portfolio-empty">${own ? 'Вы ещё не добавили работы в портфолио' : 'Портфолио пока пусто'}</div>`}
-      </div>
+      ${portfolioSectionHTML(id, own)}
       <h2 style="margin-top:24px">Отзывы (${reviews.length})</h2>
       <div class="card">
         ${reviews.length ? reviews.map(r => {
@@ -5072,6 +5058,45 @@ case 'admin-complaints': html = viewAdminComplaints(); break;
       </div>
     </div>`;
   }
+  function portfolioSectionHTML(userId, own){
+    var items = App.portfolioFor(userId);
+    return '<div class="portfolio-section">'
+      + '<div class="between" style="margin-bottom:14px">'
+        + '<h2 style="margin:0">Портфолио ('+items.length+')</h2>'
+        + (own ? '<button class="btn-primary btn-sm" id="addPortfolio">+ Добавить</button>' : '')
+      + '</div>'
+      + (items.length ? '<div class="portfolio-grid">'+items.map(function(p){
+          return '<div class="portfolio-item" data-portfolio="'+p.id+'">'
+            + (p.image_url ? '<img src="'+esc(p.image_url)+'" alt="'+esc(p.title)+'">' : '<div style="height:200px;background:#e6e9ee;display:flex;align-items:center;justify-content:center;color:#9aa0a6">Нет изображения</div>')
+            + '<div class="p-info">'
+              + '<div class="p-title">'+esc(p.title)+'</div>'
+              + (p.project_url ? '<a href="'+esc(p.project_url)+'" target="_blank" rel="noopener" style="font-size:13px;color:var(--green);margin:4px 0;display:inline-block">🔗 Открыть проект</a>' : '')
+              + '<div class="p-desc">'+esc(p.description||'')+'</div>'
+              + (own ? '<div class="p-actions"><button class="btn-outline btn-sm" data-delete-portfolio="'+p.id+'">Удалить</button></div>' : '')
+            + '</div>'
+          + '</div>';
+        }).join('') : '<div class="portfolio-empty">'+(own ? 'Вы ещё не добавили работы в портфолио' : 'Портфолио пока пусто')+'</div>')
+      + '</div>';
+  }
+  function rerenderPortfolioSection(userId){
+    var own = App.me() && App.me().id === userId;
+    var section = document.querySelector('.portfolio-section');
+    if(section) section.outerHTML = portfolioSectionHTML(userId, own);
+    var addBtn = document.getElementById('addPortfolio');
+    if(addBtn) addBtn.onclick = function(){ openPortfolioModal(); };
+    document.querySelectorAll('[data-delete-portfolio]').forEach(function(b){
+      b.onclick = async function(){
+        var id = b.dataset.deletePortfolio;
+        if(!confirm('Удалить работу из портфолио?')) return;
+        try {
+          await App.deletePortfolio(id);
+          toast('Работа удалена', 'success');
+          rerenderPortfolioSection(userId);
+        } catch(e){
+          toast('Не удалось удалить', 'error');
+        }
+      };
+    });
   function stars(rating){
     const r = Math.round(Number(rating)||0);
     return '★★★★★'.slice(0,r) + '☆☆☆☆☆'.slice(0,5-r);
@@ -6489,17 +6514,7 @@ function viewAdminComplaints(){
         input.click();
       });
       $('#addPortfolio')?.addEventListener('click', () => openPortfolioModal());
-      $$('[data-delete-portfolio]').forEach(b => b.onclick = async () => {
-        const id = b.dataset.deletePortfolio;
-        if (!confirm('Удалить работу из портфолио?')) return;
-        try {
-          await App.deletePortfolio(id);
-          toast('Работа удалена', 'success');
-          render();
-        } catch (e) {
-          toast('Не удалось удалить', 'error');
-        }
-      });
+      if(typeof rerenderPortfolioSection==='function') rerenderPortfolioSection(param);
     }
     if (route === 'me'){
       $('#editProfile')?.addEventListener('click', () => openEditProfile());
@@ -7026,6 +7041,7 @@ function emptyState(text, cta=''){
           navigate('#tavern?view=project&project=' + result.id);
           render();
         } catch(err){
+          console.error('createTavernProject error:', err);
           btn.disabled = false; btn.textContent = 'Опубликовать';
           toast('Ошибка: ' + (err.message||'Не удалось создать проект'),'error');
         }
@@ -7482,7 +7498,7 @@ async function openPaymentModal(orderId){
         incrementQuestProgress('addPortfolio');
         closeModal();
         toast('Работа добавлена в портфолио','success');
-        render();
+        rerenderPortfolioSection(me.id);
       } catch(err){
         btn.disabled = false; btn.textContent = 'Добавить';
         toast('Ошибка: ' + (err.message||err),'error');
